@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LipoRelief - Deine smarte Begleiterin</title>
+    <meta name="description" content="Intelligente App für Lipödem-Management mit Schmerztracking und RLS-Hilfe">
+    <meta name="theme-color" content="#9333ea">
+    <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiTGlwb1JlbGllZiIsInNob3J0X25hbWUiOiJMaXBvUmVsaWVmIiwic3RhcnRfdXJsIjoiLiIsImRpc3BsYXkiOiJzdGFuZGFsb25lIiwiYmFja2dyb3VuZF9jb2xvciI6IiNmZmZmZmYiLCJ0aGVtZV9jb2xvciI6IiM5MzMzZWEifQ==">
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/recharts@2.5.0/dist/Recharts.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; overflow-x: hidden; }
+        input[type="range"] { -webkit-appearance: none; appearance: none; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #9333ea; cursor: pointer; }
+        input[type="range"]::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: #9333ea; cursor: pointer; border: none; }
+        .slider::-webkit-slider-thumb { background: white; border: 3px solid #9333ea; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+        #root { min-height: 100vh; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } = Recharts;
+
+        // Lucide Icons als SVG Components
+        const Heart = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>;
+        const Activity = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>;
+        const Calendar = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>;
+        const BarChart3 = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>;
+        const Moon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>;
+        const Zap = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>;
+        const Plus = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
+        const X = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
+        const ChevronRight = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>;
+        const TrendingUp = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>;
+        const AlertCircle = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>;
+        const Thermometer = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"></path></svg>;
+        const Droplets = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.84-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z"></path><path d="M12.56 6.6A10.97 10.97 0 0 0 14 3.02c.5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a6.98 6.98 0 0 1-11.91 4.97"></path></svg>;
+        const Apple = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20.94c1.5 0 2.75 1.06 4 1.06 3 0 6-8 6-12.22A4.91 4.91 0 0 0 17 5c-2.22 0-4 1.44-5 2-1-.56-2.78-2-5-2a4.9 4.9 0 0 0-5 4.78C2 14 5 22 8 22c1.25 0 2.5-1.06 4-1.06Z"></path><path d="M10 2c1 .5 2 2 2 5"></path></svg>;
+        const Pill = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"></path><path d="m8.5 8.5 7 7"></path></svg>;
+        const Check = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>;
+        const CloudRain = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 13v8m-8-8v8m-4-4v4m16-4v4"></path><path d="M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25"></path></svg>;
+        const BookOpen = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>;
+
+        // Storage Wrapper für localStorage
+        window.storage = {
+            get: async (key) => {
+                const value = localStorage.getItem(key);
+                return value ? { key, value, shared: false } : null;
+            },
+            set: async (key, value) => {
+                localStorage.setItem(key, value);
+                return { key, value, shared: false };
+            },
+            delete: async (key) => {
+                localStorage.removeItem(key);
+                return { key, deleted: true, shared: false };
+            }
+        };
+
+        const LipoReliefApp = () => {
+            const [activeTab, setActiveTab] = useState('dashboard');
+            const [entries, setEntries] = useState([]);
+            const [showQuickLog, setShowQuickLog] = useState(false);
+            const [showDetailedLog, setShowDetailedLog] = useState(false);
+            const [medications, setMedications] = useState([]);
+            const [showMedForm, setShowMedForm] = useState(false);
+
+            useEffect(() => {
+                const loadData = async () => {
+                    try {
+                        const entriesResult = await window.storage.get('lipedema-entries');
+                        if (entriesResult) setEntries(JSON.parse(entriesResult.value));
+
+                        const medsResult = await window.storage.get('medications');
+                        if (medsResult) setMedications(JSON.parse(medsResult.value));
+                    } catch (error) {
+                        console.log('Erstmaliger Start');
+                    }
+                };
+                loadData();
+            }, []);
+
+            const saveEntries = async (newEntries) => {
+                setEntries(newEntries);
+                await window.storage.set('lipedema-entries', JSON.stringify(newEntries));
+            };
+
+            const saveMedications = async (newMeds) => {
+                setMedications(newMeds);
+                await window.storage.set('medications', JSON.stringify(newMeds));
+            };
+
+            const addQuickEntry = (painLevel, rlsLevel) => {
+                const newEntry = {
+                    id: Date.now(),
+                    date: new Date().toISOString(),
+                    painLevel,
+                    rlsLevel,
+                    type: 'quick'
+                };
+                saveEntries([newEntry, ...entries]);
+                setShowQuickLog(false);
+            };
+
+            const addDetailedEntry = (data) => {
+                const newEntry = {
+                    id: Date.now(),
+                    date: new Date().toISOString(),
+                    ...data,
+                    type: 'detailed'
+                };
+                saveEntries([newEntry, ...entries]);
+                setShowDetailedLog(false);
+            };
+
+            const addMedication = (med) => {
+                const newMed = { id: Date.now(), ...med, lastTaken: null };
+                saveMedications([...medications, newMed]);
+                setShowMedForm(false);
+            };
+
+            const takeMedication = async (medId) => {
+                const updated = medications.map(med => 
+                    med.id === medId ? { ...med, lastTaken: new Date().toISOString() } : med
+                );
+                saveMedications(updated);
+            };
+
+            const analyzePatterns = () => {
+                if (entries.length < 3) return null;
+                const last7Days = entries.slice(0, 7);
+                const avgPain7 = last7Days.reduce((sum, e) => sum + (e.painLevel || 0), 0) / last7Days.length;
+                const avgRls7 = last7Days.reduce((sum, e) => sum + (e.rlsLevel || 0), 0) / last7Days.length;
+                const trend = entries.length >= 14 ? 
+                    (avgPain7 > entries.slice(7, 14).reduce((sum, e) => sum + (e.painLevel || 0), 0) / 7 ? 'steigend' : 'fallend') : 
+                    'neutral';
+
+                const nightEntries = entries.filter(e => {
+                    const hour = new Date(e.date).getHours();
+                    return hour >= 20 || hour <= 6;
+                });
+                const dayEntries = entries.filter(e => {
+                    const hour = new Date(e.date).getHours();
+                    return hour > 6 && hour < 20;
+                });
+                const worseAtNight = nightEntries.length > 0 && dayEntries.length > 0 &&
+                    (nightEntries.reduce((s, e) => s + e.painLevel, 0) / nightEntries.length) >
+                    (dayEntries.reduce((s, e) => s + e.painLevel, 0) / dayEntries.length);
+
+                return { 
+                    avgPain: avgPain7.toFixed(1), 
+                    avgRls: avgRls7.toFixed(1),
+                    trend,
+                    worseAtNight,
+                    totalEntries: entries.length
+                };
+            };
+
+            const patterns = analyzePatterns();
+
+            const getSmartSuggestions = () => {
+                const latestEntry = entries[0];
+                if (!latestEntry) {
+                    return [{
+                        icon: <Plus />,
+                        title: 'Ersten Eintrag erstellen',
+                        action: 'Beginne mit dem Tracking deiner Symptome',
+                        priority: 'high'
+                    }];
+                }
+
+                const suggestions = [];
+                const hour = new Date().getHours();
+                
+                if (latestEntry.painLevel >= 7) {
+                    suggestions.push({
+                        icon: <Thermometer />,
+                        title: 'Akute Schmerzlinderung',
+                        action: 'Kühlung 15 Min + Beine hochlegen 45° + Kompression prüfen',
+                        priority: 'high'
+                    });
+                }
+
+                if (latestEntry.rlsLevel >= 6) {
+                    suggestions.push({
+                        icon: <Moon />,
+                        title: 'Restless Legs Soforthilfe',
+                        action: 'Magnesium 400mg + Wadendehnung 3x30s + Wechselfußbad',
+                        priority: 'high'
+                    });
+                }
+
+                if (patterns && patterns.avgPain > 6) {
+                    suggestions.push({
+                        icon: <Apple />,
+                        title: 'Entzündung aktiv senken',
+                        action: 'Omega-3 erhöhen, Zucker meiden, Kurkuma-Tee',
+                        priority: 'high'
+                    });
+                }
+
+                if (hour >= 19 || hour <= 6) {
+                    suggestions.push({
+                        icon: <Moon />,
+                        title: 'Nacht-Vorbereitung',
+                        action: 'Magnesium einnehmen + Beine kühlen + Kompression lockern',
+                        priority: 'medium'
+                    });
+                }
+
+                suggestions.push({
+                    icon: <Droplets />,
+                    title: 'Hydration Check',
+                    action: 'Mindestens 2L Wasser heute? Lymphfluss unterstützen!',
+                    priority: 'medium'
+                });
+
+                if (hour >= 10 && hour <= 18) {
+                    suggestions.push({
+                        icon: <Activity />,
+                        title: 'Sanfte Bewegung',
+                        action: '10 Min Spaziergang oder Lymphgymnastik',
+                        priority: 'medium'
+                    });
+                }
+
+                return suggestions;
+            };
+
+            const suggestions = getSmartSuggestions();
+
+            const getChartData = () => {
+                return entries.slice(0, 14).reverse().map(entry => ({
+                    date: new Date(entry.date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' }),
+                    Schmerz: entry.painLevel,
+                    RLS: entry.rlsLevel,
+                    Schlaf: entry.sleepQuality || 0
+                }));
+            };
+
+            const DashboardView = () => (
+                <div className="space-y-4 pb-20">
+                    <div className="bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl p-6 text-white shadow-lg">
+                        <div className="flex justify-between items-start mb-4">
+                            <div>
+                                <h2 className="text-xl font-bold mb-1">Wie geht es dir?</h2>
+                                <p className="text-purple-100 text-sm">Jetzt erfassen</p>
+                            </div>
+                            <Heart />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                            <button 
+                                onClick={() => setShowQuickLog(true)}
+                                className="bg-white text-purple-600 px-4 py-3 rounded-xl font-semibold hover:bg-purple-50 transition flex items-center justify-center gap-2"
+                            >
+                                <Zap />
+                                Schnell
+                            </button>
+                            <button 
+                                onClick={() => setShowDetailedLog(true)}
+                                className="bg-purple-600 text-white px-4 py-3 rounded-xl font-semibold hover:bg-purple-700 transition flex items-center justify-center gap-2 border-2 border-purple-300"
+                            >
+                                <Plus />
+                                Detailliert
+                            </button>
+                        </div>
+                    </div>
+
+                    {patterns && (
+                        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-100">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-2">
+                                    <TrendingUp />
+                                    <h3 className="font-bold text-gray-800">7-Tage Analyse</h3>
+                                </div>
+                                <span className={`text-xs px-3 py-1 rounded-full font-semibold ${
+                                    patterns.trend === 'steigend' ? 'bg-red-100 text-red-700' : 
+                                    patterns.trend === 'fallend' ? 'bg-green-100 text-green-700' : 
+                                    'bg-gray-100 text-gray-700'
+                                }`}>
+                                    {patterns.trend}
+                                </span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4 mb-4">
+                                <div>
+                                    <p className="text-sm text-gray-600 mb-1">Ø Schmerz</p>
+                                    <p className="text-3xl font-bold text-blue-600">{patterns.avgPain}/10</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-gray-600 mb-1">Ø RLS</p>
+                                    <p className="text-3xl font-bold text-purple-600">{patterns.avgRls}/10</p>
+                                </div>
+                            </div>
+                            {patterns.worseAtNight && (
+                                <div className="bg-indigo-100 rounded-lg p-3 flex items-center gap-2">
+                                    <Moon />
+                                    <p className="text-sm text-indigo-800">
+                                        <strong>Muster:</strong> Symptome nachts stärker
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {medications.length > 0 && (
+                        <div className="bg-white rounded-2xl p-5 border border-gray-200">
+                            <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
+                                <Pill />
+                                Medikamente & Supplements
+                            </h3>
+                            <div className="space-y-2">
+                                {medications.map(med => {
+                                    const lastTaken = med.lastTaken ? new Date(med.lastTaken) : null;
+                                    const hoursSince = lastTaken ? (Date.now() - lastTaken.getTime()) / (1000 * 60 * 60) : null;
+                                    const needsToTake = !lastTaken || hoursSince >= 24;
+                                    
+                                    return (
+                                        <div key={med.id} className={`p-3 rounded-lg border-2 ${
+                                            needsToTake ? 'bg-pink-50 border-pink-200' : 'bg-gray-50 border-gray-200'
+                                        }`}>
+                                            <div className="flex justify-between items-center">
+                                                <div>
+                                                    <p className="font-semibold text-gray-800">{med.name}</p>
+                                                    <p className="text-xs text-gray-500">{med.dosage} • {med.time}</p>
+                                                    {lastTaken && (
+                                                        <p className="text-xs text-gray-400 mt-1">
+                                                            Zuletzt: {lastTaken.toLocaleString('de-DE', { 
+                                                                day: '2-digit', 
+                                                                month: '2-digit',
+                                                                hour: '2-digit', 
+                                                                minute: '2-digit' 
+                                                            })}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                                <button
+                                                    onClick={() => takeMedication(med.id)}
+                                                    className={`p-2 rounded-lg ${
+                                                        needsToTake 
+                                                            ? 'bg-pink-500 text-white hover:bg-pink-600' 
+                                                            : 'bg-gray-200 text-gray-400'
+                                                    }`}
+                                                >
+                                                    <Check />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            <button
+                                onClick={() => setShowMedForm(true)}
+                                className="w-full mt-3 p-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-pink-300 hover:text-pink-600 transition flex items-center justify-center gap-2"
+                            >
+                                <Plus />
+                                Medikament hinzufügen
+                            </button>
+                        </div>
+                    )}
+
+                    <div>
+                        <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
+                            <Zap />
+                            Für dich empfohlen
+                        </h3>
+                        <div className="space-y-2">
+                            {suggestions.map((suggestion, idx) => (
+                                <div 
+                                    key={idx}
+                                    className={`p-4 rounded-xl border-2 ${
+                                        suggestion.priority === 'high' 
+                                            ? 'bg-red-50 border-red-200' 
+                                            : 'bg-white border-gray-200'
+                                    }`}
+                                >
+                                    <div className="flex items-start gap-3">
+                                        <div className="w-5 h-5 flex-shrink-0">{suggestion.icon}</div>
+                                        <div className="flex-1">
+                                            <h4 className="font-semibold text-gray-800 mb-1">{suggestion.title}</h4>
+                                            <p className="text-sm text-gray-600">{suggestion.action}</p>
+                                        </div>
+                                        <ChevronRight />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-red-50 to-orange-50 rounded-2xl p-6 border border-red-200">
+                        <h3 className="font-bold text-red-800 mb-4 flex items-center gap-2">
+                            <AlertCircle />
+                            Notfall-Toolbox
+                        </h3>
+                        <div className="grid grid-cols-2 gap-2">
+                            <button className="bg-white p-3 rounded-lg text-sm font-medium text-gray-700 hover:bg-red-50 transition border border-red-100">
+                                🧊 Kühlprotokoll
+                            </button>
+                            <button className="bg-white p-3 rounded-lg text-sm font-medium text-gray-700 hover:bg-red-50 transition border border-red-100">
+                                🦵 RLS Akuthilfe
+                            </button>
+                            <button className="bg-white p-3 rounded-lg text-sm font-medium text-gray-700 hover:bg-red-50 transition border border-red-100">
+                                💊 Schmerz-Log
+                            </button>
+                            <button className="bg-white p-3 rounded-lg text-sm font-medium text-gray-700 hover:bg-red-50 transition border border-red-100">
+                                🧘‍♀️ Atemübung 4-7-8
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+
+            const StatisticsView = () => {
+                const chartData = getChartData();
+                
+                return (
+                    <div className="space-y-4 pb-20">
+                        <h2 className="text-2xl font-bold text-gray-800">Statistiken</h2>
+                        
+                        {entries.length < 3 ? (
+                            <div className="text-center py-12 bg-white rounded-2xl border border-gray-200">
+                                <BarChart3 />
+                                <p className="text-gray-500">Mindestens 3 Einträge für Statistiken</p>
+                            </div>
+                        ) : (
+                            <>
+                                <div className="bg-white rounded-2xl p-5 border border-gray-200">
+                                    <h3 className="font-bold text-gray-800 mb-4">14-Tage Verlauf</h3>
+                                    <ResponsiveContainer width="100%" height={250}>
+                                        <AreaChart data={chartData}>
+                                            <defs>
+                                                <linearGradient id="colorPain" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3}/>
+                                                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                                                </linearGradient>
+                                                <linearGradient id="colorRLS" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%" stopColor="#a855f7" stopOpacity={0.3}/>
+                                                    <stop offset="95%" stopColor="#a855f7" stopOpacity={0}/>
+                                                </linearGradient>
+                                            </defs>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                                            <XAxis dataKey="date" stroke="#9ca3af" style={{ fontSize: '12px' }} />
+                                            <YAxis stroke="#9ca3af" domain={[0, 10]} />
+                                            <Tooltip 
+                                                contentStyle={{ 
+                                                    backgroundColor: 'white', 
+                                                    border: '1px solid #e5e7eb',
+                                                    borderRadius: '8px',
+                                                    fontSize: '14px'
+                                                }}
+                                            />
+                                            <Area type="monotone" dataKey="Schmerz" stroke="#ef4444" fillOpacity={1} fill="url(#colorPain)" strokeWidth={2} />
+                                            <Area type="monotone" dataKey="RLS" stroke="#a855f7" fillOpacity={1} fill="url(#colorRLS)" strokeWidth={2} />
+                                        </AreaChart>
+                                    </ResponsiveContainer>
+                                    <div className="flex gap-4 justify-center mt-4">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                                            <span className="text-sm text-gray-600">Schmerz</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                                            <span className="text-sm text-gray-600">RLS</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {patterns && (
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-4 text-white">
+                                            <p className="text-sm opacity-90 mb-1">Einträge gesamt</p>
+                                            <p className="text-3xl font-bold">{patterns.totalEntries}</p>
+                                        </div>
+                                        <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-4 text-white">
+                                            <p className="text-sm opacity-90 mb-1">Tage getrackt</p>
+                                            <p className="text-3xl font-bold">
+                                                {Math.ceil((Date.now() - new Date(entries[entries.length - 1].date).getTime()) / (1000 * 60 * 60 * 24))}
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+                            </>
+                        )}
+                    </div>
+                );
+            };
+
+            const TrackingView = () => (
+                <div className="space-y-4 pb-20">
+                    <h2 className="text-2xl font-bold text-gray-800">Verlauf</h2>
+                    {entries.length === 0 ? (
+                        <div className="text-center py-12 bg-white rounded-2xl border border-gray-200">
+                            <div className="w-16 h-16 mx-auto mb-4"><Calendar /></div>
+                            <p className="text-gray-500 mb-4">Noch keine Einträge</p>
+                            <button 
+                                onClick={() => setShowQuickLog(true)}
+                                className="bg-purple-500 text-white px-6 py-3 rounded-xl font-semibold hover:bg-purple-600"
+                            >
+                                Ersten Eintrag erstellen
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            {entries.map(entry => (
+                                <div key={entry.id} className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div>
+                                            <span className="text-sm font-medium text-gray-700">
+                                                {new Date(entry.date).toLocaleDateString('de-DE', { 
+                                                    weekday: 'long', 
+                                                    day: '2-digit', 
+                                                    month: 'long'
+                                                })}
+                                            </span>
+                                            <p className="text-xs text-gray-500">
+                                                {new Date(entry.date).toLocaleTimeString('de-DE', { 
+                                                    hour: '2-digit', 
+                                                    minute: '2-digit' 
+                                                })}
+                                            </p>
+                                        </div>
+                                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                                            entry.type === 'detailed' 
+                                                ? 'bg-purple-100 text-purple-700' 
+                                                : 'bg-gray-100 text-gray-600'
+                                        }`}>
+                                            {entry.type === 'detailed' ? 'Detailliert' : 'Schnell'}
+                                        </span>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4 mb-3">
+                                        <div>
+                                            <p className="text-xs text-gray-500 mb-2 flex items-center gap-1">
+                                                <AlertCircle /> Schmerz
+                                            </p>
+                                            <div className="flex items-center gap-2">
+                                                <div className="flex-1 bg-gray-200 rounded-full h-2.5">
+                                                    <div 
+                                                        className="bg-gradient-to-r from-red-400 to-red-600 h-2.5 rounded-full transition-all"
+                                                        style={{ width: `${(entry.painLevel / 10) * 100}%` }}
+                                                    />
+                                                </div>
+                                                <span className="text-sm font-bold text-gray-800 w-8">{entry.painLevel}/10</span>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-gray-500 mb-2 flex items-center gap-1">
+                                                <Moon /> RLS
+                                            </p>
+                                            <div className="flex items-center gap-2">
+                                                <div className="flex-1 bg-gray-200 rounded-full h-2.5">
+                                                    <div 
+                                                        className="bg-gradient-to-r from-purple-400 to-purple-600 h-2.5 rounded-full transition-all"
+                                                        style={{ width: `${(entry.rlsLevel / 10) * 100}%` }}
+                                                    />
+                                                </div>
+                                                <span className="text-sm font-bold text-gray-800 w-8">{entry.rlsLevel}/10</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {entry.type === 'detailed' && (
+                                        <div className="mt-4 pt-4 border-t border-gray-100 grid grid-cols-2 gap-3 text-sm">
+                                            {entry.sleepQuality && (
+                                                <div className="flex items-center gap-2 text-gray-600">
+                                                    <Moon />
+                                                    <span>Schlaf: {entry.sleepQuality}/10</span>
+                                                </div>
+                                            )}
+                                            {entry.hydration && (
+                                                <div className="flex items-center gap-2 text-gray-600">
+                                                    <Droplets />
+                                                    <span>Wasser: {entry.hydration}L</span>
+                                                </div>
+                                            )}
+                                            {entry.compression && (
+                                                <div className="flex items-center gap-2 text-gray-600">
+                                                    <Activity />
+                                                    <span>Kompression: {entry.compression}h</span>
+                                                </div>
+                                            )}
+                                            {entry.notes && (
+                                                <div className="col-span-2 mt-2 p-2 bg-gray-50 rounded text-xs text-gray-600">
+                                                    <BookOpen />
+                                                    {entry.notes}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            );
+
+            const QuickLogModal = () => {
+                const [pain, setPain] = useState(5);
+                const [rls, setRls] = useState(5);
+
+                return (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                        <div className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
+                            <div className="flex justify-between items-center mb-6">
+                                <h3 className="text-xl font-bold text-gray-800">Schneller Check-in</h3>
+                                <button onClick={() => setShowQuickLog(false)} className="text-gray-400 hover:text-gray-600">
+                                    <X />
+                                </button>
+                            </div>
+                            
+                            <div className="space-y-6">
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-3">
+                                        Schmerz-Level: <span className="text-2xl text-red-600">{pain}</span>/10
+                                    </label>
+                                    <input 
+                                        type="range" 
+                                        min="0" 
+                                        max="10" 
+                                        value={pain}
+                                        onChange={(e) => setPain(parseInt(e.target.value))}
+                                        className="w-full h-3 slider"
+                                    />
+                                    <div className="flex justify-between text-xs text-gray-500 mt-1">
+                                        <span>Kein Schmerz</span>
+                                        <span>Unerträglich</span>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-3">
+                                        Restless Legs: <span className="text-2xl text-purple-600">{rls}</span>/10
+                                    </label>
+                                    <input 
+                                        type="range" 
+                                        min="0" 
+                                        max="10" 
+                                        value={rls}
+                                        onChange={(e) => setRls(parseInt(e.target.value))}
+                                        className="w-full h-3 slider"
+                                    />
+                                    <div className="flex justify-between text-xs text-gray-500 mt-1">
+                                        <span>Keine Symptome</span>
+                                        <span>Sehr stark</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3 mt-8">
+                                <button 
+                                    onClick={() => setShowQuickLog(false)}
+                                    className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-xl font-semibold text-gray-700 hover:bg-gray-50 transition"
+                                >
+                                    Abbrechen
+                                </button>
+                                <button 
+                                    onClick={() => addQuickEntry(pain, rls)}
+                                    className="flex-1 px-4 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-semibold hover:from-purple-600 hover:to-pink-600 transition shadow-lg"
+                                >
+                                    Speichern
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            const DetailedLogModal = () => {
+                const [pain, setPain] = useState(5);
+                const [rls, setRls] = useState(5);
+                const [sleep, setSleep] = useState(5);
+                const [hydration, setHydration] = useState(2);
+                const [compression, setCompression] = useState(0);
+                const [notes, setNotes] = useState('');
+
+                const handleSubmit = () => {
+                    addDetailedEntry({
+                        painLevel: pain,
+                        rlsLevel: rls,
+                        sleepQuality: sleep,
+                        hydration,
+                        compression,
+                        notes
+                    });
+                };
+
+                return (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+                        <div className="bg-white rounded-2xl p-6 max-w-md w-full my-8">
+                            <div className="flex justify-between items-center mb-6">
+                                <h3 className="text-xl font-bold text-gray-800">Detaillierter Eintrag</h3>
+                                <button onClick={() => setShowDetailedLog(false)} className="text-gray-400 hover:text-gray-600">
+                                    <X />
+                                </button>
+                            </div>
+                            
+                            <div className="space-y-5 max-h-[60vh] overflow-y-auto pr-2">
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                        Schmerz: {pain}/10
+                                    </label>
+                                    <input type="range" min="0" max="10" value={pain} onChange={(e) => setPain(parseInt(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                        Restless Legs: {rls}/10
+                                    </label>
+                                    <input type="range" min="0" max="10" value={rls} onChange={(e) => setRls(parseInt(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                        Schlafqualität: {sleep}/10
+                                    </label>
+                                    <input type="range" min="0" max="10" value={sleep} onChange={(e) => setSleep(parseInt(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                        Wasser: {hydration}L
+                                    </label>
+                                    <input type="range" min="0" max="5" step="0.5" value={hydration} onChange={(e) => setHydration(parseFloat(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                        Kompression: {compression}h
+                                    </label>
+                                    <input type="range" min="0" max="24" value={compression} onChange={(e) => setCompression(parseInt(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">Notizen</label>
+                                    <textarea 
+                                        value={notes}
+                                        onChange={(e) => setNotes(e.target.value)}
+                                        placeholder="Was war heute besonders?"
+                                        className="w-full p-3 border border-gray-300 rounded-lg resize-none"
+                                        rows="3"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3 mt-6">
+                                <button onClick={() => setShowDetailedLog(false)} className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-xl font-semibold text-gray-700 hover:bg-gray-50">
+                                    Abbrechen
+                                </button>
+                                <button onClick={handleSubmit} className="flex-1 px-4 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-semibold hover:from-purple-600 hover:to-pink-600 shadow-lg">
+                                    Speichern
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            const MedicationFormModal = () => {
+                const [name, setName] = useState('');
+                const [dosage, setDosage] = useState('');
+                const [time, setTime] = useState('morgens');
+
+                const handleSubmit = () => {
+                    if (name && dosage) {
+                        addMedication({ name, dosage, time });
+                        setName('');
+                        setDosage('');
+                    }
+                };
+
+                return (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                        <div className="bg-white rounded-2xl p-6 max-w-md w-full">
+                            <div className="flex justify-between items-center mb-6">
+                                <h3 className="text-xl font-bold text-gray-800">Medikament hinzufügen</h3>
+                                <button onClick={() => setShowMedForm(false)} className="text-gray-400 hover:text-gray-600">
+                                    <X />
+                                </button>
+                            </div>
+                            
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">Name</label>
+                                    <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="z.B. Magnesium" className="w-full p-3 border border-gray-300 rounded-lg" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">Dosierung</label>
+                                    <input type="text" value={dosage} onChange={(e) => setDosage(e.target.value)} placeholder="z.B. 400mg" className="w-full p-3 border border-gray-300 rounded-lg" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">Einnahmezeit</label>
+                                    <select value={time} onChange={(e) => setTime(e.target.value)} className="w-full p-3 border border-gray-300 rounded-lg">
+                                        <option value="morgens">Morgens</option>
+                                        <option value="mittags">Mittags</option>
+                                        <option value="abends">Abends</option>
+                                        <option value="vor dem Schlaf">Vor dem Schlaf</option>
+                                        <option value="bei Bedarf">Bei Bedarf</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3 mt-6">
+                                <button onClick={() => setShowMedForm(false)} className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-xl font-semibold text-gray-700 hover:bg-gray-50">
+                                    Abbrechen
+                                </button>
+                                <button onClick={handleSubmit} className="flex-1 px-4 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-semibold hover:from-purple-600 hover:to-pink-600 shadow-lg">
+                                    Hinzufügen
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">
+                    <div className="bg-gradient-to-r from-purple-600 via-pink-500 to-purple-600 text-white p-6 shadow-xl">
+                        <div className="flex items-center gap-3 mb-2">
+                            <div className="bg-white bg-opacity-20 p-2 rounded-xl">
+                                <Heart />
+                            </div>
+                            <div>
+                                <h1 className="text-2xl font-bold">LipoRelief</h1>
+                                <p className="text-purple-100 text-sm">Deine smarte Begleiterin</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="p-4">
+                        {activeTab === 'dashboard' && <DashboardView />}
+                        {activeTab === 'tracking' && <TrackingView />}
+                        {activeTab === 'statistics' && <StatisticsView />}
+                    </div>
+
+                    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-2xl">
+                        <div className="flex justify-around p-3">
+                            <button onClick={() => setActiveTab('dashboard')} className={`flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition ${activeTab === 'dashboard' ? 'text-purple-600 bg-purple-50' : 'text-gray-400'}`}>
+                                <Activity />
+                                <span className="text-xs font-semibold">Home</span>
+                            </button>
+                            <button onClick={() => setActiveTab('statistics')} className={`flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition ${activeTab === 'statistics' ? 'text-purple-600 bg-purple-50' : 'text-gray-400'}`}>
+                                <BarChart3 />
+                                <span className="text-xs font-semibold">Statistik</span>
+                            </button>
+                            <button onClick={() => setActiveTab('tracking')} className={`flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition ${activeTab === 'tracking' ? 'text-purple-600 bg-purple-50' : 'text-gray-400'}`}>
+                                <Calendar />
+                                <span className="text-xs font-semibold">Verlauf</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    {showQuickLog && <QuickLogModal />}
+                    {showDetailedLog && <DetailedLogModal />}
+                    {showMedForm && <MedicationFormModal />}
+                </div>
+            );
+        };
+
+        ReactDOM.render(<LipoReliefApp />, document.getElementById('root'));
+    </script>
+</body>
+</html
