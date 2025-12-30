@@ -61,8 +61,8 @@
         .fade-in { animation: fadeIn 0.5s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         
-        /* Sicherstellen, dass Inhalt nicht hinter den fixierten Leisten verschwindet */
-        .safe-area-pb-large { padding-bottom: 180px; }
+        /* Genug Platz unten lassen für Navi + Widmung */
+        .safe-area-pb-large { padding-bottom: 200px; }
     </style>
 </head>
 <body class="bg-white text-gray-800">
@@ -71,8 +71,8 @@
     <script type="text/babel" data-type="module">
         import React, { useState, useEffect } from 'https://esm.sh/react@18.2.0';
         import { createRoot } from 'https://esm.sh/react-dom@18.2.0/client';
-        // Feather Icon hinzugefügt
-        import { Calendar, Activity, Moon, Droplets, AlertCircle, TrendingUp, Heart, Wind, Thermometer, Clock, Plus, ChevronRight, Zap, CloudRain, Apple, Pill, BarChart3, BookOpen, X, Check, Smile, Brain, Coffee, Sun, Sunrise, Sunset, Utensils, Feather } from 'https://esm.sh/lucide-react@0.292.0';
+        // Settings Icon hinzugefügt
+        import { Calendar, Activity, Moon, Droplets, AlertCircle, TrendingUp, Heart, Wind, Thermometer, Clock, Plus, ChevronRight, Zap, CloudRain, Apple, Pill, BarChart3, BookOpen, X, Check, Smile, Brain, Coffee, Sun, Sunrise, Sunset, Utensils, Feather, Settings } from 'https://esm.sh/lucide-react@0.292.0';
         import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'https://esm.sh/recharts@2.10.3';
 
         const LipoReliefApp = () => {
@@ -86,6 +86,7 @@
             const [showQuickLog, setShowQuickLog] = useState(false);
             const [showDetailedLog, setShowDetailedLog] = useState(false);
             const [showSetup, setShowSetup] = useState(false);
+            const [showSettings, setShowSettings] = useState(false); // Neu: Einstellungen
             const [activeToolboxItem, setActiveToolboxItem] = useState(null); 
 
             // --- LADE & SPEICHER LOGIK ---
@@ -125,6 +126,7 @@
                 setUserProfile(profileData);
                 localStorage.setItem('user-profile', JSON.stringify(profileData));
                 setShowSetup(false);
+                setShowSettings(false); // Schließt auch das Settings Modal
             };
 
             // --- ZYKLUS BERECHNUNG ---
@@ -139,7 +141,7 @@
                 let phase = 'Follikelphase';
                 if (cycleDay > 14 && cycleDay <= 20) phase = 'Eisprung-Phase';
                 if (cycleDay > 20 && cycleDay <= 28) phase = 'Lutealphase (PMS möglich)';
-                if (cycleDay > 28) phase = 'Überfällig / Zyklusende';
+                if (cycleDay > 28) phase = 'Überfällig / Unregelmäßig';
 
                 return { day: cycleDay, phase };
             };
@@ -231,7 +233,7 @@
                 setShowDetailedLog(false);
             };
 
-            // --- KOMPONENTEN (Gold Theme angepasst) ---
+            // --- KOMPONENTEN ---
 
             const SetupModal = () => {
                 const [name, setName] = useState('');
@@ -256,6 +258,46 @@
                                     <input type="date" value={lastPeriod} onChange={e => setLastPeriod(e.target.value)} className="w-full p-3 border-b-2 border-gold-200 focus:border-gold-500 outline-none bg-transparent text-center text-lg text-gray-600" />
                                 </div>
                                 <button onClick={handleSubmit} className="w-full bg-gold-500 text-white p-3 rounded-full font-bold mt-6 shadow-md hover:bg-gold-600 transition uppercase tracking-wider text-sm">Starten</button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            // NEU: Settings Modal (wiederverwendet Setup Logik mit vorhandenen Daten)
+            const SettingsModal = () => {
+                const [name, setName] = useState(userProfile?.name || '');
+                const [age, setAge] = useState(userProfile?.age || 42);
+                const [lastPeriod, setLastPeriod] = useState(userProfile?.lastPeriod || '');
+
+                const handleSubmit = () => { 
+                    saveProfile({ name, age, lastPeriod });
+                    // Trigger reload of calculations implicitly by state update
+                };
+
+                return (
+                    <div className="fixed inset-0 bg-white bg-opacity-95 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+                        <div className="bg-white rounded-2xl p-8 w-full max-w-sm shadow-xl fade-in border border-gold-200 relative">
+                             <button onClick={() => setShowSettings(false)} className="absolute top-4 right-4 text-gold-400"><X className="w-6 h-6" /></button>
+                            <div className="text-center mb-8">
+                                <Settings className="w-10 h-10 text-gold-500 mx-auto mb-4" strokeWidth={1.5} />
+                                <h2 className="text-2xl font-handwriting text-gold-600 mb-2">Einstellungen</h2>
+                                <p className="text-sm text-gray-500">Hier kannst du deinen Zyklus anpassen.</p>
+                            </div>
+                            <div className="space-y-5">
+                                <div className="text-left">
+                                    <label className="block text-xs text-gray-400 ml-1">Name</label>
+                                    <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full p-3 border-b border-gold-200 outline-none text-lg text-gray-700" />
+                                </div>
+                                <div className="text-left">
+                                    <label className="block text-xs text-gray-400 ml-1">Alter</label>
+                                    <input type="number" value={age} onChange={e => setAge(parseInt(e.target.value))} className="w-full p-3 border-b border-gold-200 outline-none text-lg text-gray-700" />
+                                </div>
+                                <div className="text-left bg-gold-50 p-3 rounded-xl border border-gold-100">
+                                    <label className="block text-xs font-bold text-gold-600 mb-1">Startdatum letzte Periode</label>
+                                    <input type="date" value={lastPeriod} onChange={e => setLastPeriod(e.target.value)} className="w-full bg-transparent outline-none text-lg text-gray-700" />
+                                </div>
+                                <button onClick={handleSubmit} className="w-full bg-gold-500 text-white p-3 rounded-full font-bold mt-6 shadow-md hover:bg-gold-600 transition uppercase tracking-wider text-sm">Speichern</button>
                             </div>
                         </div>
                     </div>
@@ -430,29 +472,33 @@
             // --- MAIN RENDER ---
             return (
                 <div className="min-h-screen bg-white font-sans text-gray-900 safe-area-pb-large relative">
-                    {/* HEADER - Weiß/Gold + Feder Logo */}
-                    <div className="bg-white p-6 sticky top-0 z-30 border-b border-gold-100 shadow-[0_2px_10px_-5px_rgba(217,165,63,0.2)] text-center">
-                        <div className="flex flex-col items-center justify-center">
-                             <Feather className="w-8 h-8 text-gold-500 mb-1 opacity-80" strokeWidth={1.5} />
-                             <h1 className="font-handwriting text-4xl text-gold-600 leading-tight">DaniCare</h1>
+                    {/* HEADER - Kompakt & mit Settings Icon */}
+                    <div className="bg-white p-3 sticky top-0 z-30 border-b border-gold-100 shadow-[0_2px_10px_-5px_rgba(217,165,63,0.2)]">
+                        <div className="flex flex-row items-center justify-center gap-3 relative">
+                             {/* Settings Button Oben Rechts */}
+                             <button onClick={() => setShowSettings(true)} className="absolute right-2 text-gold-400 p-2 hover:bg-gold-50 rounded-full transition">
+                                <Settings size={20} />
+                             </button>
+
+                             <Feather className="w-6 h-6 text-gold-500 opacity-80" strokeWidth={1.5} />
+                             <h1 className="font-handwriting text-3xl text-gold-600 pt-1">DaniCare</h1>
                         </div>
                     </div>
 
                     <div className="p-6 max-w-lg mx-auto">
                         {activeTab === 'dashboard' && <DashboardView />}
                         {activeTab === 'history' && <TrackingView />}
-                        {/* Statistik Platzhalter der Einfachheit halber entfernt für finalen Look */}
                     </div>
 
-                    {/* WIDMUNG - Sticky Bottom über Navi */}
-                    <div className="fixed bottom-[70px] left-0 w-full bg-white/90 backdrop-blur-md border-t border-gold-100 p-3 text-center z-40 shadow-[0_-2px_10px_-5px_rgba(217,165,63,0.1)]">
-                        <p className="text-sm text-gold-600 italic font-medium leading-tight font-handwriting">
+                    {/* WIDMUNG - Höher gesetzt für genug Platz */}
+                    <div className="fixed bottom-[80px] left-0 w-full bg-white/95 backdrop-blur-md border-t border-gold-100 p-4 text-center z-40 shadow-[0_-2px_10px_-5px_rgba(217,165,63,0.1)]">
+                        <p className="text-sm text-gold-600 italic font-medium leading-relaxed font-handwriting">
                             Für Dani – Damit deine Beine endlich so leicht werden, wie du meine Welt machst. ❤️ <br/>
-                            <span className="text-xs opacity-70 font-sans normal-case">- von deinem Kai</span>
+                            <span className="text-xs opacity-70 font-sans normal-case block mt-1">- von deinem Kai</span>
                         </p>
                     </div>
 
-                    {/* NAVIGATION - Weiß/Gold */}
+                    {/* NAVIGATION */}
                     <div className="fixed bottom-0 left-0 w-full bg-white border-t border-gold-100 p-2 flex justify-around items-center z-40 pb-5 pt-3">
                         <button onClick={() => setActiveTab('dashboard')} className={`p-2 rounded-xl flex flex-col items-center gap-1 transition ${activeTab === 'dashboard' ? 'text-gold-600' : 'text-gold-300 hover:text-gold-400'}`}>
                             <Activity size={22} strokeWidth={activeTab === 'dashboard' ? 2.5 : 2} />
@@ -465,6 +511,7 @@
                     </div>
 
                     {showSetup && <SetupModal />}
+                    {showSettings && <SettingsModal />}
                     {showQuickLog && <QuickLogModal />}
                     {showDetailedLog && <DetailedLogModal />}
                     {activeToolboxItem && <ToolboxModal />}
