@@ -9,9 +9,9 @@
     <style>
         /* Custom Styles für Slider */
         input[type=range] {
-            -webkit-appearance: none; /* Hides the slider so that custom slider can be made */
-            width: 100%; /* Specific width is required for Firefox. */
-            background: transparent; /* Otherwise white in Chrome */
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
         }
 
         input[type=range]::-webkit-slider-thumb {
@@ -22,7 +22,7 @@
             background: #ffffff;
             cursor: pointer;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            margin-top: -10px; /* You need to specify a margin in Chrome, but in Firefox and IE it is automatic */
+            margin-top: -10px;
             border: 2px solid #f3f4f6;
         }
 
@@ -34,7 +34,7 @@
         }
         
         .fade-in {
-            animation: fadeIn 0.3s ease-in-out;
+            animation: fadeIn 0.4s ease-in-out;
         }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
@@ -48,7 +48,7 @@
     <script type="text/babel" data-type="module">
         import React, { useState, useEffect } from 'https://esm.sh/react@18.2.0';
         import { createRoot } from 'https://esm.sh/react-dom@18.2.0/client';
-        import { Calendar, Activity, Moon, Droplets, AlertCircle, TrendingUp, Heart, Wind, Thermometer, Clock, Plus, ChevronRight, Zap, CloudRain, Apple, Pill, BarChart3, BookOpen, X, Check, Smile, Brain } from 'https://esm.sh/lucide-react@0.292.0';
+        import { Calendar, Activity, Moon, Droplets, AlertCircle, TrendingUp, Heart, Wind, Thermometer, Clock, Plus, ChevronRight, Zap, CloudRain, Apple, Pill, BarChart3, BookOpen, X, Check, Smile, Brain, Coffee, Sun, Sunrise, Sunset, Utensils } from 'https://esm.sh/lucide-react@0.292.0';
         import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'https://esm.sh/recharts@2.10.3';
 
         const LipoReliefApp = () => {
@@ -112,80 +112,158 @@
                 const diffTime = Math.abs(today - lastPeriod);
                 const cycleDay = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
                 
-                let phase = 'Follikelphase';
-                if (cycleDay > 14 && cycleDay <= 28) phase = 'Lutealphase (PMS möglich)';
-                if (cycleDay > 28) phase = 'Überfällig / Unregelmäßig';
+                let phase = 'Follikelphase (Energie!)';
+                if (cycleDay > 14 && cycleDay <= 20) phase = 'Eisprung-Phase';
+                if (cycleDay > 20 && cycleDay <= 28) phase = 'Lutealphase (PMS?)';
+                if (cycleDay > 28) phase = 'Überfällig / Zyklusende';
 
                 return { day: cycleDay, phase };
             };
 
             const cycleInfo = getCycleInfo();
 
-            // --- KI / SMART SUGGESTIONS ---
+            // --- INTELLIGENTE TIPPS LOGIK (NEU & ERWEITERT) ---
             const getSmartSuggestions = () => {
                 const suggestions = [];
-                const hour = new Date().getHours();
+                const now = new Date();
+                const hour = now.getHours();
                 const latestEntry = entries[0];
                 
-                // 1. Altersspezifische Vorschläge
-                if (userProfile && userProfile.age >= 40) {
-                    if (cycleInfo && cycleInfo.day > 20) {
-                        suggestions.push({
-                            icon: <Brain className="w-5 h-5 text-pink-400" />,
-                            title: 'Hormon-Balance',
-                            action: 'Zyklusende naht: Stimmungsschwankungen sind normal. Sei gnädig zu dir.',
-                            priority: 'medium'
-                        });
-                    }
-                }
+                // Hilfsfunktion für zufällige Auswahl aus einem Array
+                const pickOne = (arr) => arr[now.getDate() % arr.length]; // Rotiert täglich
 
+                // FALL 0: Ganz am Anfang
                 if (!latestEntry) {
                     suggestions.push({
                         icon: <Plus className="w-5 h-5 text-purple-400" />,
                         title: 'Tracking starten',
-                        action: 'Erstelle deinen ersten Eintrag für bessere Analysen.',
+                        action: 'Erstelle deinen ersten Eintrag für maßgeschneiderte Tipps.',
                         priority: 'high'
                     });
                     return suggestions;
                 }
 
-                if (latestEntry.painLevel >= 7) {
+                // 1. SCHMERZ-MANAGEMENT
+                if (latestEntry.painLevel >= 8) {
                     suggestions.push({
-                        icon: <Thermometer className="w-5 h-5 text-blue-400" />,
-                        title: 'Akute Entlastung',
-                        action: 'Beine hoch (45°), Kühlen & keine Wärme!',
+                        icon: <Thermometer className="w-5 h-5 text-red-500" />,
+                        title: 'Akuter Schmerz-Modus',
+                        action: 'Sofort hinlegen. Beine hoch (45°). Kühlen (kein Eis direkt auf Haut!). Keine Wärme!',
                         priority: 'high'
                     });
-                }
-
-                if (latestEntry.rlsLevel >= 6) {
+                } else if (latestEntry.painLevel >= 5) {
+                    const painTips = [
+                        'Sanfte Lymphdrainage oder leichtes Ausstreichen in Richtung Herz.',
+                        'Wechselduschen an den Unterschenkeln können jetzt Entlastung bringen.',
+                        'Hast du deine Kompression heute lang genug getragen?'
+                    ];
                     suggestions.push({
-                        icon: <Moon className="w-5 h-5 text-purple-400" />,
-                        title: 'RLS Beruhigung',
-                        action: 'Magnesiumöl auftragen & leichte Massage.',
-                        priority: 'high'
-                    });
-                }
-
-                if (latestEntry.hydration && latestEntry.hydration < 1.5) {
-                     suggestions.push({
-                        icon: <Droplets className="w-5 h-5 text-blue-400" />,
-                        title: 'Wasser trinken',
-                        action: 'Du hast heute wenig getrunken. Ein großes Glas Wasser hilft dem Lymphfluss!',
-                        priority: 'high'
-                    });
-                }
-
-                if (hour >= 19 || hour <= 6) {
-                    suggestions.push({
-                        icon: <Moon className="w-5 h-5 text-indigo-400" />,
-                        title: 'Gute Nacht',
-                        action: 'Blulight-Filter an? Kleines Glas Wasser?',
+                        icon: <Activity className="w-5 h-5 text-orange-400" />,
+                        title: 'Schmerzlinderung',
+                        action: pickOne(painTips),
                         priority: 'medium'
                     });
                 }
 
-                return suggestions;
+                // 2. RLS (Restless Legs)
+                if (latestEntry.rlsLevel >= 6) {
+                    const rlsTips = [
+                        'Magnesiumöl direkt auf die Waden sprühen & einmassieren.',
+                        'Igelball-Massage der Fußsohlen zur Nervenstimulation.',
+                        'Waden-Dehnung im Stehen (Ausfallschritt an der Wand).'
+                    ];
+                    suggestions.push({
+                        icon: <Moon className="w-5 h-5 text-purple-500" />,
+                        title: 'RLS Intervention',
+                        action: pickOne(rlsTips),
+                        priority: 'high'
+                    });
+                } else if (latestEntry.rlsLevel >= 3) {
+                     suggestions.push({
+                        icon: <Wind className="w-5 h-5 text-purple-300" />,
+                        title: 'Unruhige Beine',
+                        action: 'Ein kurzer Spaziergang an der frischen Luft kann das Nervensystem beruhigen.',
+                        priority: 'medium'
+                    });
+                }
+
+                // 3. HYDRATION (Falls verfügbar)
+                if (latestEntry.type === 'detailed' && latestEntry.hydration !== undefined) {
+                    if (latestEntry.hydration < 1.5) {
+                         suggestions.push({
+                            icon: <Droplets className="w-5 h-5 text-blue-500" />,
+                            title: 'Lymphfluss anregen',
+                            action: 'Achtung: Zu wenig Wasser staut die Lymphe. Trink jetzt ein großes Glas!',
+                            priority: 'high'
+                        });
+                    } else if (latestEntry.hydration > 2.5) {
+                         suggestions.push({
+                            icon: <Check className="w-5 h-5 text-green-500" />,
+                            title: 'Super hydriert!',
+                            action: 'Perfekt für dein Gewebe. Weiter so!',
+                            priority: 'low'
+                        });
+                    }
+                }
+
+                // 4. ZYKLUS & ALTER (Perimenopause)
+                if (userProfile && userProfile.age >= 40 && cycleInfo) {
+                    if (cycleInfo.day > 20) {
+                        // PMS Phase
+                        suggestions.push({
+                            icon: <Brain className="w-5 h-5 text-pink-400" />,
+                            title: 'Zyklus-Endphase',
+                            action: 'Progesteron fällt ab. Wassereinlagerungen normal. Weniger Salz essen, mehr Brennnesseltee.',
+                            priority: 'medium'
+                        });
+                    } else if (cycleInfo.day < 5) {
+                        // Periode
+                        suggestions.push({
+                            icon: <Heart className="w-5 h-5 text-red-300" />,
+                            title: 'Zyklus-Neustart',
+                            action: 'Gönn dir Ruhe. Wärme im Rücken hilft, aber Beine kühl halten.',
+                            priority: 'medium'
+                        });
+                    }
+                }
+
+                // 5. TAGESZEIT-ABHÄNGIG
+                if (hour >= 6 && hour < 11) {
+                    suggestions.push({
+                        icon: <Sunrise className="w-5 h-5 text-yellow-500" />,
+                        title: 'Morgen-Routine',
+                        action: 'Trockenbürsten vor dem Duschen regt das Lymphsystem optimal an.',
+                        priority: 'medium'
+                    });
+                } else if (hour >= 18) {
+                    if (latestEntry.rlsLevel > 3) {
+                        suggestions.push({
+                            icon: <Coffee className="w-5 h-5 text-gray-500" />,
+                            title: 'Abend-Check',
+                            action: 'Verzichte jetzt auf Alkohol & Koffein, das triggert RLS massiv.',
+                            priority: 'high'
+                        });
+                    } else {
+                         suggestions.push({
+                            icon: <Sunset className="w-5 h-5 text-indigo-400" />,
+                            title: 'Entspannung',
+                            action: 'Beine hochlegen und 5 Minuten tief in den Bauch atmen (Vagus-Nerv).',
+                            priority: 'low'
+                        });
+                    }
+                }
+
+                // 6. WENN ALLES GUT IST (Maintenance)
+                if (suggestions.length === 0 && latestEntry.painLevel < 3 && latestEntry.rlsLevel < 3) {
+                     suggestions.push({
+                        icon: <Smile className="w-5 h-5 text-green-500" />,
+                        title: 'Alles im Grünen Bereich',
+                        action: 'Toll! Ein guter Moment für Hautpflege oder ein leichtes Workout.',
+                        priority: 'low'
+                    });
+                }
+
+                return suggestions.slice(0, 4); // Max 4 Tipps anzeigen
             };
 
             const suggestions = getSmartSuggestions();
@@ -494,7 +572,7 @@
                         </h3>
                         <div className="space-y-2">
                             {suggestions.map((suggestion, idx) => (
-                                <div key={idx} className={`p-4 rounded-xl border-l-4 bg-white shadow-sm ${suggestion.priority === 'high' ? 'border-red-400' : 'border-purple-400'}`}>
+                                <div key={idx} className={`p-4 rounded-xl border-l-4 bg-white shadow-sm ${suggestion.priority === 'high' ? 'border-red-400' : suggestion.priority === 'medium' ? 'border-orange-400' : 'border-green-400'}`}>
                                     <div className="flex items-start gap-3">
                                         {suggestion.icon}
                                         <div>
