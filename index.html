@@ -1,37 +1,55 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Activity, Moon, Droplets, AlertCircle, TrendingUp, Heart, Wind, Thermometer, Clock, Plus, ChevronRight, Zap, Sun } from 'lucide-react';
+import { Calendar, Activity, Moon, Droplets, AlertCircle, TrendingUp, Heart, Wind, Thermometer, Clock, Plus, ChevronRight, Zap, Sun, CloudRain, Apple, Pill, Bell, BarChart3, BookOpen, X, Check, ArrowLeft } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
 
 const LipoReliefApp = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [entries, setEntries] = useState([]);
   const [showQuickLog, setShowQuickLog] = useState(false);
+  const [showDetailedLog, setShowDetailedLog] = useState(false);
+  const [medications, setMedications] = useState([]);
+  const [showMedForm, setShowMedForm] = useState(false);
+  const [cycleData, setCycleData] = useState(null);
 
-  // Lade gespeicherte Daten beim Start
+  // Lade alle gespeicherten Daten (FIX: localStorage statt window.storage)
   useEffect(() => {
-    const loadData = async () => {
+    const loadData = () => {
       try {
-        const result = await window.storage.get('lipedema-entries');
-        if (result) {
-          setEntries(JSON.parse(result.value));
-        }
+        const entriesResult = localStorage.getItem('lipedema-entries');
+        if (entriesResult) setEntries(JSON.parse(entriesResult));
+
+        const medsResult = localStorage.getItem('medications');
+        if (medsResult) setMedications(JSON.parse(medsResult));
+
+        const cycleResult = localStorage.getItem('cycle-data');
+        if (cycleResult) setCycleData(JSON.parse(cycleResult));
       } catch (error) {
-        console.log('Keine vorherigen Daten gefunden');
+        console.log('Erstmaliger Start - keine Daten vorhanden oder Fehler beim Laden');
       }
     };
     loadData();
   }, []);
 
-  // Speichere Daten bei Änderungen
-  const saveEntries = async (newEntries) => {
+  // Speicherfunktionen (FIX: localStorage statt window.storage)
+  const saveEntries = (newEntries) => {
     setEntries(newEntries);
     try {
-      await window.storage.set('lipedema-entries', JSON.stringify(newEntries));
+      localStorage.setItem('lipedema-entries', JSON.stringify(newEntries));
     } catch (error) {
       console.error('Speichern fehlgeschlagen:', error);
     }
   };
 
-  // Quick Log Funktion
+  const saveMedications = (newMeds) => {
+    setMedications(newMeds);
+    try {
+      localStorage.setItem('medications', JSON.stringify(newMeds));
+    } catch (error) {
+      console.error('Speichern fehlgeschlagen:', error);
+    }
+  };
+
+  // Quick Log mit nur Schmerz und RLS
   const addQuickEntry = (painLevel, rlsLevel) => {
     const newEntry = {
       id: Date.now(),
@@ -44,98 +62,296 @@ const LipoReliefApp = () => {
     setShowQuickLog(false);
   };
 
-  // KI-Analyse für Muster
+  // Detaillierter Log
+  const addDetailedEntry = (data) => {
+    const newEntry = {
+      id: Date.now(),
+      date: new Date().toISOString(),
+      ...data,
+      type: 'detailed'
+    };
+    saveEntries([newEntry, ...entries]);
+    setShowDetailedLog(false);
+  };
+
+  // Medikation hinzufügen
+  const addMedication = (med) => {
+    const newMed = {
+      id: Date.now(),
+      ...med,
+      lastTaken: null
+    };
+    saveMedications([...medications, newMed]);
+    setShowMedForm(false);
+  };
+
+  // Medikation als eingenommen markieren
+  const takeMedication = (medId) => {
+    const updated = medications.map(med => 
+      med.id === medId ? { ...med, lastTaken: new Date().toISOString() } : med
+    );
+    saveMedications(updated);
+  };
+
+  // Erweiterte KI-Analyse
   const analyzePatterns = () => {
     if (entries.length < 3) return null;
     
-    const recentEntries = entries.slice(0, 7);
-    const avgPain = recentEntries.reduce((sum, e) => sum + (e.painLevel || 0), 0) / recentEntries.length;
-    const avgRls = recentEntries.reduce((sum, e) => sum + (e.rlsLevel || 0), 0) / recentEntries.length;
+    const last7Days = entries.slice(0, 7);
+    const last30Days = entries.slice(0, 30);
     
-    return { avgPain: avgPain.toFixed(1), avgRls: avgRls.toFixed(1) };
+    const avgPain7 = last7Days.reduce((sum, e) => sum + (e.painLevel || 0), 0) / last7Days.length;
+    const avgRls7 = last7Days.reduce((sum, e) => sum + (e.rlsLevel || 0), 0) / last7Days.length;
+    
+    const trend = entries.length >= 14 ? 
+      (avgPain7 > entries.slice(7, 14).reduce((sum, e) => sum + (e.painLevel || 0), 0) / 7 ? 'steigend' : 'fallend') : 
+      'neutral';
+
+    // Finde schlechteste Zeit (Nacht vs Tag)
+    const nightEntries = entries.filter(e => {
+      const hour = new Date(e.date).getHours();
+      return hour >= 20 || hour <= 6;
+    });
+    const dayEntries = entries.filter(e => {
+      const hour = new Date(e.date).getHours();
+      return hour > 6 && hour < 20;
+    });
+
+    const worseAtNight = nightEntries.length > 0 && dayEntries.length > 0 &&
+      (nightEntries.reduce((s, e) => s + e.painLevel, 0) / nightEntries.length) >
+      (dayEntries.reduce((s, e) => s + e.painLevel, 0) / dayEntries.length);
+
+    return { 
+      avgPain: avgPain7.toFixed(1), 
+      avgRls: avgRls7.toFixed(1),
+      trend,
+      worseAtNight,
+      totalEntries: entries.length
+    };
   };
 
   const patterns = analyzePatterns();
 
-  // Intelligente Vorschläge basierend auf aktuellen Werten
+  // Intelligente Vorschläge
   const getSmartSuggestions = () => {
     const latestEntry = entries[0];
-    if (!latestEntry) return [];
+    if (!latestEntry) {
+      return [{
+        icon: <Plus className="w-5 h-5 text-purple-400" />,
+        title: 'Ersten Eintrag erstellen',
+        action: 'Beginne mit dem Tracking deiner Symptome',
+        priority: 'high'
+      }];
+    }
 
     const suggestions = [];
+    const hour = new Date().getHours();
     
+    // Akute Schmerzintervention
     if (latestEntry.painLevel >= 7) {
       suggestions.push({
         icon: <Thermometer className="w-5 h-5 text-blue-400" />,
         title: 'Akute Schmerzlinderung',
-        action: 'Kühle Kompression für 15 Min. + Beine hochlegen',
+        action: 'Kühlung 15 Min + Beine hochlegen 45° + Kompression prüfen',
         priority: 'high'
       });
     }
 
+    // RLS Akuthilfe
     if (latestEntry.rlsLevel >= 6) {
       suggestions.push({
         icon: <Moon className="w-5 h-5 text-purple-400" />,
-        title: 'Restless Legs Protokoll',
-        action: 'Magnesium + Wadendehnung + Fußmassage',
+        title: 'Restless Legs Soforthilfe',
+        action: 'Magnesium 400mg + Wadendehnung 3x30s + Wechselfußbad',
         priority: 'high'
       });
     }
 
+    // Entzündungshemmung bei chronisch hohen Werten
     if (patterns && patterns.avgPain > 6) {
       suggestions.push({
-        icon: <Activity className="w-5 h-5 text-green-400" />,
-        title: 'Entzündung reduzieren',
-        action: 'Entzündungshemmende Ernährung verstärken',
+        icon: <Apple className="w-5 h-5 text-green-400" />,
+        title: 'Entzündung aktiv senken',
+        action: 'Omega-3 erhöhen, Zucker meiden, Kurkuma-Tee',
+        priority: 'high'
+      });
+    }
+
+    // Nachtprotokoll wenn Abend/Nacht
+    if (hour >= 19 || hour <= 6) {
+      suggestions.push({
+        icon: <Moon className="w-5 h-5 text-indigo-400" />,
+        title: 'Nacht-Vorbereitung',
+        action: 'Magnesium einnehmen + Beine kühlen + Kompression lockern',
         priority: 'medium'
       });
     }
 
+    // Hydration
     suggestions.push({
       icon: <Droplets className="w-5 h-5 text-cyan-400" />,
       title: 'Hydration Check',
-      action: '2L Wasser heute erreicht?',
+      action: 'Mindestens 2L Wasser heute? Lymphfluss unterstützen!',
       priority: 'medium'
     });
+
+    // Bewegung bei langem Sitzen
+    if (hour >= 10 && hour <= 18) {
+      suggestions.push({
+        icon: <Activity className="w-5 h-5 text-orange-400" />,
+        title: 'Sanfte Bewegung',
+        action: '10 Min Spaziergang oder Lymphgymnastik',
+        priority: 'medium'
+      });
+    }
+
+    // Wetterwarnung (simuliert - könnte mit API erweitert werden)
+    const isWeatherSensitive = latestEntry.weather === 'stormy' || latestEntry.pressure === 'low';
+    if (isWeatherSensitive) {
+      suggestions.push({
+        icon: <CloudRain className="w-5 h-5 text-gray-400" />,
+        title: 'Wetterempfindlich',
+        action: 'Kompression verstärken, extra Magnesium, Ruhe einplanen',
+        priority: 'medium'
+      });
+    }
 
     return suggestions;
   };
 
   const suggestions = getSmartSuggestions();
 
+  // Chart Daten vorbereiten
+  const getChartData = () => {
+    return entries.slice(0, 14).reverse().map(entry => ({
+      date: new Date(entry.date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' }),
+      Schmerz: entry.painLevel,
+      RLS: entry.rlsLevel,
+      Schlaf: entry.sleepQuality || 0
+    }));
+  };
+
   // Dashboard View
   const DashboardView = () => (
     <div className="space-y-4 pb-20">
       {/* Quick Status Card */}
       <div className="bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl p-6 text-white shadow-lg">
-        <h2 className="text-xl font-bold mb-2">Wie geht es dir?</h2>
-        <p className="text-purple-100 mb-4">Schneller Check-in</p>
-        <button 
-          onClick={() => setShowQuickLog(true)}
-          className="bg-white text-purple-600 px-6 py-3 rounded-xl font-semibold hover:bg-purple-50 transition w-full flex items-center justify-center gap-2"
-        >
-          <Plus className="w-5 h-5" />
-          Aktuellen Zustand erfassen
-        </button>
+        <div className="flex justify-between items-start mb-4">
+          <div>
+            <h2 className="text-xl font-bold mb-1">Wie geht es dir?</h2>
+            <p className="text-purple-100 text-sm">Jetzt erfassen</p>
+          </div>
+          <Heart className="w-8 h-8 text-pink-200" />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <button 
+            onClick={() => setShowQuickLog(true)}
+            className="bg-white text-purple-600 px-4 py-3 rounded-xl font-semibold hover:bg-purple-50 transition flex items-center justify-center gap-2"
+          >
+            <Zap className="w-4 h-4" />
+            Schnell
+          </button>
+          <button 
+            onClick={() => setShowDetailedLog(true)}
+            className="bg-purple-600 text-white px-4 py-3 rounded-xl font-semibold hover:bg-purple-700 transition flex items-center justify-center gap-2 border-2 border-purple-300"
+          >
+            <Plus className="w-4 h-4" />
+            Detailliert
+          </button>
+        </div>
       </div>
 
-      {/* AI Insights */}
+      {/* AI Insights mit Trend */}
       {patterns && (
         <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-100">
-          <div className="flex items-center gap-2 mb-4">
-            <TrendingUp className="w-5 h-5 text-blue-600" />
-            <h3 className="font-bold text-gray-800">7-Tage Analyse</h3>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-blue-600" />
+              <h3 className="font-bold text-gray-800">7-Tage Analyse</h3>
+            </div>
+            <span className={`text-xs px-3 py-1 rounded-full font-semibold ${
+              patterns.trend === 'steigend' ? 'bg-red-100 text-red-700' : 
+              patterns.trend === 'fallend' ? 'bg-green-100 text-green-700' : 
+              'bg-gray-100 text-gray-700'
+            }`}>
+              {patterns.trend}
+            </span>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4 mb-4">
             <div>
               <p className="text-sm text-gray-600 mb-1">Ø Schmerz</p>
               <p className="text-3xl font-bold text-blue-600">{patterns.avgPain}/10</p>
             </div>
             <div>
-              <p className="text-sm text-gray-600 mb-1">Ø Restless Legs</p>
+              <p className="text-sm text-gray-600 mb-1">Ø RLS</p>
               <p className="text-3xl font-bold text-purple-600">{patterns.avgRls}/10</p>
             </div>
           </div>
+          {patterns.worseAtNight && (
+            <div className="bg-indigo-100 rounded-lg p-3 flex items-center gap-2">
+              <Moon className="w-4 h-4 text-indigo-600" />
+              <p className="text-sm text-indigo-800">
+                <strong>Muster:</strong> Symptome nachts stärker
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Medikations-Reminder */}
+      {medications.length > 0 && (
+        <div className="bg-white rounded-2xl p-5 border border-gray-200">
+          <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
+            <Pill className="w-5 h-5 text-pink-500" />
+            Medikamente & Supplements
+          </h3>
+          <div className="space-y-2">
+            {medications.map(med => {
+              const lastTaken = med.lastTaken ? new Date(med.lastTaken) : null;
+              const hoursSince = lastTaken ? (Date.now() - lastTaken.getTime()) / (1000 * 60 * 60) : null;
+              const needsToTake = !lastTaken || hoursSince >= 24;
+              
+              return (
+                <div key={med.id} className={`p-3 rounded-lg border-2 ${
+                  needsToTake ? 'bg-pink-50 border-pink-200' : 'bg-gray-50 border-gray-200'
+                }`}>
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="font-semibold text-gray-800">{med.name}</p>
+                      <p className="text-xs text-gray-500">{med.dosage} • {med.time}</p>
+                      {lastTaken && (
+                        <p className="text-xs text-gray-400 mt-1">
+                          Zuletzt: {lastTaken.toLocaleString('de-DE', { 
+                            day: '2-digit', 
+                            month: '2-digit',
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                          })}
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => takeMedication(med.id)}
+                      className={`p-2 rounded-lg ${
+                        needsToTake 
+                          ? 'bg-pink-500 text-white hover:bg-pink-600' 
+                          : 'bg-gray-200 text-gray-400'
+                      }`}
+                    >
+                      <Check className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <button
+            onClick={() => setShowMedForm(true)}
+            className="w-full mt-3 p-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-pink-300 hover:text-pink-600 transition flex items-center justify-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Medikament hinzufügen
+          </button>
         </div>
       )}
 
@@ -143,7 +359,7 @@ const LipoReliefApp = () => {
       <div>
         <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
           <Zap className="w-5 h-5 text-yellow-500" />
-          Personalisierte Empfehlungen
+          Für dich empfohlen
         </h3>
         <div className="space-y-2">
           {suggestions.map((suggestion, idx) => (
@@ -161,7 +377,7 @@ const LipoReliefApp = () => {
                   <h4 className="font-semibold text-gray-800 mb-1">{suggestion.title}</h4>
                   <p className="text-sm text-gray-600">{suggestion.action}</p>
                 </div>
-                <ChevronRight className="w-5 h-5 text-gray-400" />
+                <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
               </div>
             </div>
           ))}
@@ -170,39 +386,117 @@ const LipoReliefApp = () => {
 
       {/* Notfall Toolbox */}
       <div className="bg-gradient-to-br from-red-50 to-orange-50 rounded-2xl p-6 border border-red-200">
-        <h3 className="font-bold text-red-800 mb-3 flex items-center gap-2">
+        <h3 className="font-bold text-red-800 mb-4 flex items-center gap-2">
           <AlertCircle className="w-5 h-5" />
           Notfall-Toolbox
         </h3>
         <div className="grid grid-cols-2 gap-2">
-          <button className="bg-white p-3 rounded-lg text-sm font-medium text-gray-700 hover:bg-red-100 transition">
+          <button className="bg-white p-3 rounded-lg text-sm font-medium text-gray-700 hover:bg-red-50 transition border border-red-100">
             🧊 Kühlprotokoll
           </button>
-          <button className="bg-white p-3 rounded-lg text-sm font-medium text-gray-700 hover:bg-red-100 transition">
+          <button className="bg-white p-3 rounded-lg text-sm font-medium text-gray-700 hover:bg-red-50 transition border border-red-100">
             🦵 RLS Akuthilfe
           </button>
-          <button className="bg-white p-3 rounded-lg text-sm font-medium text-gray-700 hover:bg-red-100 transition">
-            💊 Medikations-Log
+          <button className="bg-white p-3 rounded-lg text-sm font-medium text-gray-700 hover:bg-red-50 transition border border-red-100">
+            💊 Schmerz-Log
           </button>
-          <button className="bg-white p-3 rounded-lg text-sm font-medium text-gray-700 hover:bg-red-100 transition">
-            🧘‍♀️ Atemübung
+          <button className="bg-white p-3 rounded-lg text-sm font-medium text-gray-700 hover:bg-red-50 transition border border-red-100">
+            🧘‍♀️ Atemübung 4-7-8
           </button>
         </div>
       </div>
     </div>
   );
 
-  // Tracking View
+  // Statistics View mit Charts
+  const StatisticsView = () => {
+    const chartData = getChartData();
+    
+    return (
+      <div className="space-y-4 pb-20">
+        <h2 className="text-2xl font-bold text-gray-800">Statistiken</h2>
+        
+        {entries.length < 3 ? (
+          <div className="text-center py-12 bg-white rounded-2xl border border-gray-200">
+            <BarChart3 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-500">Mindestens 3 Einträge für Statistiken</p>
+          </div>
+        ) : (
+          <>
+            {/* Verlaufs-Chart */}
+            <div className="bg-white rounded-2xl p-5 border border-gray-200">
+              <h3 className="font-bold text-gray-800 mb-4">14-Tage Verlauf</h3>
+              <ResponsiveContainer width="100%" height={250}>
+                <AreaChart data={chartData}>
+                  <defs>
+                    <linearGradient id="colorPain" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="colorRLS" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#a855f7" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#a855f7" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis dataKey="date" stroke="#9ca3af" style={{ fontSize: '12px' }} />
+                  <YAxis stroke="#9ca3af" domain={[0, 10]} />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'white', 
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '8px',
+                      fontSize: '14px'
+                    }}
+                  />
+                  <Area type="monotone" dataKey="Schmerz" stroke="#ef4444" fillOpacity={1} fill="url(#colorPain)" strokeWidth={2} />
+                  <Area type="monotone" dataKey="RLS" stroke="#a855f7" fillOpacity={1} fill="url(#colorRLS)" strokeWidth={2} />
+                </AreaChart>
+              </ResponsiveContainer>
+              <div className="flex gap-4 justify-center mt-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                  <span className="text-sm text-gray-600">Schmerz</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                  <span className="text-sm text-gray-600">RLS</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Insights */}
+            {patterns && (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-4 text-white">
+                  <p className="text-sm opacity-90 mb-1">Einträge gesamt</p>
+                  <p className="text-3xl font-bold">{patterns.totalEntries}</p>
+                </div>
+                <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-4 text-white">
+                  <p className="text-sm opacity-90 mb-1">Tage getrackt</p>
+                  <p className="text-3xl font-bold">
+                    {Math.ceil((Date.now() - new Date(entries[entries.length - 1].date).getTime()) / (1000 * 60 * 60 * 24))}
+                  </p>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    );
+  };
+
+  // Tracking View (Verlauf)
   const TrackingView = () => (
     <div className="space-y-4 pb-20">
       <h2 className="text-2xl font-bold text-gray-800">Verlauf</h2>
       {entries.length === 0 ? (
-        <div className="text-center py-12">
+        <div className="text-center py-12 bg-white rounded-2xl border border-gray-200">
           <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-500">Noch keine Einträge vorhanden</p>
+          <p className="text-gray-500 mb-4">Noch keine Einträge</p>
           <button 
             onClick={() => setShowQuickLog(true)}
-            className="mt-4 bg-purple-500 text-white px-6 py-2 rounded-lg"
+            className="bg-purple-500 text-white px-6 py-3 rounded-xl font-semibold hover:bg-purple-600"
           >
             Ersten Eintrag erstellen
           </button>
@@ -210,44 +504,91 @@ const LipoReliefApp = () => {
       ) : (
         <div className="space-y-3">
           {entries.map(entry => (
-            <div key={entry.id} className="bg-white p-4 rounded-xl border border-gray-200">
-              <div className="flex justify-between items-start mb-3">
-                <span className="text-sm text-gray-500">
-                  {new Date(entry.date).toLocaleDateString('de-DE', { 
-                    weekday: 'short', 
-                    day: '2-digit', 
-                    month: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  })}
+            <div key={entry.id} className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <span className="text-sm font-medium text-gray-700">
+                    {new Date(entry.date).toLocaleDateString('de-DE', { 
+                      weekday: 'long', 
+                      day: '2-digit', 
+                      month: 'long'
+                    })}
+                  </span>
+                  <p className="text-xs text-gray-500">
+                    {new Date(entry.date).toLocaleTimeString('de-DE', { 
+                      hour: '2-digit', 
+                      minute: '2-digit' 
+                    })}
+                  </p>
+                </div>
+                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                  entry.type === 'detailed' 
+                    ? 'bg-purple-100 text-purple-700' 
+                    : 'bg-gray-100 text-gray-600'
+                }`}>
+                  {entry.type === 'detailed' ? 'Detailliert' : 'Schnell'}
                 </span>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+
+              <div className="grid grid-cols-2 gap-4 mb-3">
                 <div>
-                  <p className="text-xs text-gray-500 mb-1">Schmerz</p>
+                  <p className="text-xs text-gray-500 mb-2 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" /> Schmerz
+                  </p>
                   <div className="flex items-center gap-2">
-                    <div className="flex-1 bg-gray-200 rounded-full h-2">
+                    <div className="flex-1 bg-gray-200 rounded-full h-2.5">
                       <div 
-                        className="bg-red-500 h-2 rounded-full transition-all"
+                        className="bg-gradient-to-r from-red-400 to-red-600 h-2.5 rounded-full transition-all"
                         style={{ width: `${(entry.painLevel / 10) * 100}%` }}
                       />
                     </div>
-                    <span className="text-sm font-bold">{entry.painLevel}/10</span>
+                    <span className="text-sm font-bold text-gray-800 w-8">{entry.painLevel}/10</span>
                   </div>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 mb-1">RLS</p>
+                  <p className="text-xs text-gray-500 mb-2 flex items-center gap-1">
+                    <Moon className="w-3 h-3" /> RLS
+                  </p>
                   <div className="flex items-center gap-2">
-                    <div className="flex-1 bg-gray-200 rounded-full h-2">
+                    <div className="flex-1 bg-gray-200 rounded-full h-2.5">
                       <div 
-                        className="bg-purple-500 h-2 rounded-full transition-all"
+                        className="bg-gradient-to-r from-purple-400 to-purple-600 h-2.5 rounded-full transition-all"
                         style={{ width: `${(entry.rlsLevel / 10) * 100}%` }}
                       />
                     </div>
-                    <span className="text-sm font-bold">{entry.rlsLevel}/10</span>
+                    <span className="text-sm font-bold text-gray-800 w-8">{entry.rlsLevel}/10</span>
                   </div>
                 </div>
               </div>
+
+              {entry.type === 'detailed' && (
+                <div className="mt-4 pt-4 border-t border-gray-100 grid grid-cols-2 gap-3 text-sm">
+                  {entry.sleepQuality && (
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <Moon className="w-4 h-4" />
+                      <span>Schlaf: {entry.sleepQuality}/10</span>
+                    </div>
+                  )}
+                  {entry.hydration && (
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <Droplets className="w-4 h-4" />
+                      <span>Wasser: {entry.hydration}L</span>
+                    </div>
+                  )}
+                  {entry.compression && (
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <Activity className="w-4 h-4" />
+                      <span>Kompression: {entry.compression}h</span>
+                    </div>
+                  )}
+                  {entry.notes && (
+                    <div className="col-span-2 mt-2 p-2 bg-gray-50 rounded text-xs text-gray-600">
+                      <BookOpen className="w-3 h-3 inline mr-1" />
+                      {entry.notes}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -262,13 +603,18 @@ const LipoReliefApp = () => {
 
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-2xl p-6 max-w-md w-full">
-          <h3 className="text-xl font-bold mb-6">Aktueller Zustand</h3>
+        <div className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-xl font-bold text-gray-800">Schneller Check-in</h3>
+            <button onClick={() => setShowQuickLog(false)} className="text-gray-400 hover:text-gray-600">
+              <X className="w-6 h-6" />
+            </button>
+          </div>
           
           <div className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Schmerz-Level: {pain}/10
+              <label className="block text-sm font-semibold text-gray-700 mb-3">
+                Schmerz-Level: <span className="text-2xl text-red-600">{pain}</span>/10
               </label>
               <input 
                 type="range" 
@@ -276,17 +622,20 @@ const LipoReliefApp = () => {
                 max="10" 
                 value={pain}
                 onChange={(e) => setPain(parseInt(e.target.value))}
-                className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                className="w-full h-3 bg-gradient-to-r from-green-200 via-yellow-200 to-red-500 rounded-lg appearance-none cursor-pointer slider"
+                style={{
+                  background: `linear-gradient(to right, #86efac 0%, #fde047 50%, #ef4444 100%)`
+                }}
               />
               <div className="flex justify-between text-xs text-gray-500 mt-1">
                 <span>Kein Schmerz</span>
-                <span>Maximal</span>
+                <span>Unerträglich</span>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Restless Legs: {rls}/10
+              <label className="block text-sm font-semibold text-gray-700 mb-3">
+                Restless Legs: <span className="text-2xl text-purple-600">{rls}</span>/10
               </label>
               <input 
                 type="range" 
@@ -294,7 +643,7 @@ const LipoReliefApp = () => {
                 max="10" 
                 value={rls}
                 onChange={(e) => setRls(parseInt(e.target.value))}
-                className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                className="w-full h-3 bg-gradient-to-r from-green-200 via-yellow-200 to-purple-500 rounded-lg appearance-none cursor-pointer slider"
               />
               <div className="flex justify-between text-xs text-gray-500 mt-1">
                 <span>Keine Symptome</span>
@@ -306,15 +655,239 @@ const LipoReliefApp = () => {
           <div className="flex gap-3 mt-8">
             <button 
               onClick={() => setShowQuickLog(false)}
-              className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-xl font-semibold text-gray-700 hover:bg-gray-50"
+              className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-xl font-semibold text-gray-700 hover:bg-gray-50 transition"
             >
               Abbrechen
             </button>
             <button 
               onClick={() => addQuickEntry(pain, rls)}
-              className="flex-1 px-4 py-3 bg-purple-500 text-white rounded-xl font-semibold hover:bg-purple-600"
+              className="flex-1 px-4 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-semibold hover:from-purple-600 hover:to-pink-600 transition shadow-lg"
             >
               Speichern
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Detailed Log Modal
+  const DetailedLogModal = () => {
+    const [pain, setPain] = useState(5);
+    const [rls, setRls] = useState(5);
+    const [sleep, setSleep] = useState(5);
+    const [hydration, setHydration] = useState(2);
+    const [compression, setCompression] = useState(0);
+    const [notes, setNotes] = useState('');
+
+    const handleSubmit = () => {
+      addDetailedEntry({
+        painLevel: pain,
+        rlsLevel: rls,
+        sleepQuality: sleep,
+        hydration,
+        compression,
+        notes
+      });
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+        <div className="bg-white rounded-2xl p-6 max-w-md w-full my-8">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-xl font-bold text-gray-800">Detaillierter Eintrag</h3>
+            <button onClick={() => setShowDetailedLog(false)} className="text-gray-400 hover:text-gray-600">
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+          
+          <div className="space-y-5 max-h-[60vh] overflow-y-auto pr-2">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Schmerz: {pain}/10
+              </label>
+              <input 
+                type="range" 
+                min="0" 
+                max="10" 
+                value={pain}
+                onChange={(e) => setPain(parseInt(e.target.value))}
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Restless Legs: {rls}/10
+              </label>
+              <input 
+                type="range" 
+                min="0" 
+                max="10" 
+                value={rls}
+                onChange={(e) => setRls(parseInt(e.target.value))}
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Schlafqualität: {sleep}/10
+              </label>
+              <input 
+                type="range" 
+                min="0" 
+                max="10" 
+                value={sleep}
+                onChange={(e) => setSleep(parseInt(e.target.value))}
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Wasser getrunken: {hydration}L
+              </label>
+              <input 
+                type="range" 
+                min="0" 
+                max="5" 
+                step="0.5"
+                value={hydration}
+                onChange={(e) => setHydration(parseFloat(e.target.value))}
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Kompression getragen: {compression}h
+              </label>
+              <input 
+                type="range" 
+                min="0" 
+                max="24" 
+                value={compression}
+                onChange={(e) => setCompression(parseInt(e.target.value))}
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Notizen
+              </label>
+              <textarea 
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Was war heute besonders? Trigger? Erfolge?"
+                className="w-full p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                rows="3"
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-3 mt-6">
+            <button 
+              onClick={() => setShowDetailedLog(false)}
+              className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-xl font-semibold text-gray-700 hover:bg-gray-50 transition"
+            >
+              Abbrechen
+            </button>
+            <button 
+              onClick={handleSubmit}
+              className="flex-1 px-4 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-semibold hover:from-purple-600 hover:to-pink-600 transition shadow-lg"
+            >
+              Speichern
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Medication Form Modal
+  const MedicationFormModal = () => {
+    const [name, setName] = useState('');
+    const [dosage, setDosage] = useState('');
+    const [time, setTime] = useState('morgens');
+
+    const handleSubmit = () => {
+      if (name && dosage) {
+        addMedication({ name, dosage, time });
+        setName('');
+        setDosage('');
+        setTime('morgens');
+      }
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl p-6 max-w-md w-full">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-xl font-bold text-gray-800">Medikament hinzufügen</h3>
+            <button onClick={() => setShowMedForm(false)} className="text-gray-400 hover:text-gray-600">
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Name
+              </label>
+              <input 
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="z.B. Magnesium, Ibuprofen"
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Dosierung
+              </label>
+              <input 
+                type="text"
+                value={dosage}
+                onChange={(e) => setDosage(e.target.value)}
+                placeholder="z.B. 400mg, 1 Tablette"
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Einnahmezeit
+              </label>
+              <select 
+                value={time}
+                onChange={(e) => setTime(e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              >
+                <option value="morgens">Morgens</option>
+                <option value="mittags">Mittags</option>
+                <option value="abends">Abends</option>
+                <option value="vor dem Schlaf">Vor dem Schlaf</option>
+                <option value="bei Bedarf">Bei Bedarf</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="flex gap-3 mt-6">
+            <button 
+              onClick={() => setShowMedForm(false)}
+              className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-xl font-semibold text-gray-700 hover:bg-gray-50 transition"
+            >
+              Abbrechen
+            </button>
+            <button 
+              onClick={handleSubmit}
+              className="flex-1 px-4 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-semibold hover:from-purple-600 hover:to-pink-600 transition shadow-lg"
+            >
+              Hinzufügen
             </button>
           </div>
         </div>
@@ -325,46 +898,68 @@ const LipoReliefApp = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">
       {/* Header */}
-      <div className="bg-gradient-to-r from-purple-600 to-pink-500 text-white p-6 shadow-lg">
+      <div className="bg-gradient-to-r from-purple-600 via-pink-500 to-purple-600 text-white p-6 shadow-xl">
         <div className="flex items-center gap-3 mb-2">
-          <Heart className="w-8 h-8" />
-          <h1 className="text-2xl font-bold">LipoRelief</h1>
+          <div className="bg-white bg-opacity-20 p-2 rounded-xl">
+            <Heart className="w-8 h-8" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold">LipoRelief</h1>
+            <p className="text-purple-100 text-sm">Deine smarte Begleiterin</p>
+          </div>
         </div>
-        <p className="text-purple-100 text-sm">Deine intelligente Begleiterin</p>
       </div>
 
       {/* Main Content */}
       <div className="p-4">
         {activeTab === 'dashboard' && <DashboardView />}
         {activeTab === 'tracking' && <TrackingView />}
+        {activeTab === 'statistics' && <StatisticsView />}
       </div>
 
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg">
-        <div className="flex justify-around p-4">
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-2xl">
+        <div className="flex justify-around p-3">
           <button
             onClick={() => setActiveTab('dashboard')}
-            className={`flex flex-col items-center gap-1 ${
-              activeTab === 'dashboard' ? 'text-purple-600' : 'text-gray-400'
+            className={`flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition ${
+              activeTab === 'dashboard' 
+                ? 'text-purple-600 bg-purple-50' 
+                : 'text-gray-400 hover:text-gray-600'
             }`}
           >
             <Activity className="w-6 h-6" />
-            <span className="text-xs font-medium">Dashboard</span>
+            <span className="text-xs font-semibold">Home</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('statistics')}
+            className={`flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition ${
+              activeTab === 'statistics' 
+                ? 'text-purple-600 bg-purple-50' 
+                : 'text-gray-400 hover:text-gray-600'
+            }`}
+          >
+            <BarChart3 className="w-6 h-6" />
+            <span className="text-xs font-semibold">Statistik</span>
           </button>
           <button
             onClick={() => setActiveTab('tracking')}
-            className={`flex flex-col items-center gap-1 ${
-              activeTab === 'tracking' ? 'text-purple-600' : 'text-gray-400'
+            className={`flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition ${
+              activeTab === 'tracking' 
+                ? 'text-purple-600 bg-purple-50' 
+                : 'text-gray-400 hover:text-gray-600'
             }`}
           >
             <Calendar className="w-6 h-6" />
-            <span className="text-xs font-medium">Verlauf</span>
+            <span className="text-xs font-semibold">Verlauf</span>
           </button>
         </div>
       </div>
 
-      {/* Quick Log Modal */}
+      {/* Modals */}
       {showQuickLog && <QuickLogModal />}
+      {showDetailedLog && <DetailedLogModal />}
+      {showMedForm && <MedicationFormModal />}
     </div>
   );
 };
