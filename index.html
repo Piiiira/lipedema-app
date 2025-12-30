@@ -3,11 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LipoRelief für Dani</title>
+    <title>DaniCare</title>
+    <link href="https://fonts.googleapis.com/css2?family=Parisienne&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        gold: {
+                            50: '#FFFAEB',
+                            100: '#FCEFC7',
+                            200: '#F8E3A3',
+                            300: '#F4D37F',
+                            400: '#F0C05B',
+                            500: '#D9A53F', /* Haupt-Gold */
+                            600: '#B3822A',
+                            700: '#8D621F',
+                        }
+                    },
+                    fontFamily: {
+                        'handwriting': ['"Parisienne"', 'cursive'],
+                        'sans': ['ui-sans-serif', 'system-ui', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
-        /* Custom Styles für Slider */
+        /* Custom Styles für Slider - Gold Theme */
         input[type=range] {
             -webkit-appearance: none;
             width: 100%;
@@ -21,9 +46,9 @@
             border-radius: 50%;
             background: #ffffff;
             cursor: pointer;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            box-shadow: 0 2px 5px rgba(217, 165, 63, 0.5); /* Gold shadow */
             margin-top: -10px;
-            border: 2px solid #f3f4f6;
+            border: 2px solid #FCEFC7; /* Gold-100 border */
         }
 
         input[type=range]::-webkit-slider-runnable-track {
@@ -33,22 +58,21 @@
             border-radius: 999px;
         }
         
-        .fade-in {
-            animation: fadeIn 0.4s ease-in-out;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        .fade-in { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        /* Sicherstellen, dass Inhalt nicht hinter den fixierten Leisten verschwindet */
+        .safe-area-pb-large { padding-bottom: 180px; }
     </style>
 </head>
-<body class="bg-gray-50">
+<body class="bg-white text-gray-800">
     <div id="root"></div>
 
     <script type="text/babel" data-type="module">
         import React, { useState, useEffect } from 'https://esm.sh/react@18.2.0';
         import { createRoot } from 'https://esm.sh/react-dom@18.2.0/client';
-        import { Calendar, Activity, Moon, Droplets, AlertCircle, TrendingUp, Heart, Wind, Thermometer, Clock, Plus, ChevronRight, Zap, CloudRain, Apple, Pill, BarChart3, BookOpen, X, Check, Smile, Brain, Coffee, Sun, Sunrise, Sunset, Utensils } from 'https://esm.sh/lucide-react@0.292.0';
+        // Feather Icon hinzugefügt
+        import { Calendar, Activity, Moon, Droplets, AlertCircle, TrendingUp, Heart, Wind, Thermometer, Clock, Plus, ChevronRight, Zap, CloudRain, Apple, Pill, BarChart3, BookOpen, X, Check, Smile, Brain, Coffee, Sun, Sunrise, Sunset, Utensils, Feather } from 'https://esm.sh/lucide-react@0.292.0';
         import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'https://esm.sh/recharts@2.10.3';
 
         const LipoReliefApp = () => {
@@ -112,9 +136,9 @@
                 const diffTime = Math.abs(today - lastPeriod);
                 const cycleDay = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
                 
-                let phase = 'Follikelphase (Energie!)';
+                let phase = 'Follikelphase';
                 if (cycleDay > 14 && cycleDay <= 20) phase = 'Eisprung-Phase';
-                if (cycleDay > 20 && cycleDay <= 28) phase = 'Lutealphase (PMS?)';
+                if (cycleDay > 20 && cycleDay <= 28) phase = 'Lutealphase (PMS möglich)';
                 if (cycleDay > 28) phase = 'Überfällig / Zyklusende';
 
                 return { day: cycleDay, phase };
@@ -122,213 +146,116 @@
 
             const cycleInfo = getCycleInfo();
 
-            // --- INTELLIGENTE TIPPS LOGIK (NEU & ERWEITERT) ---
+            // --- INTELLIGENTE TIPPS LOGIK ---
             const getSmartSuggestions = () => {
                 const suggestions = [];
                 const now = new Date();
                 const hour = now.getHours();
                 const latestEntry = entries[0];
-                
-                // Hilfsfunktion für zufällige Auswahl aus einem Array
-                const pickOne = (arr) => arr[now.getDate() % arr.length]; // Rotiert täglich
+                const pickOne = (arr) => arr[now.getDate() % arr.length]; 
 
-                // FALL 0: Ganz am Anfang
                 if (!latestEntry) {
                     suggestions.push({
-                        icon: <Plus className="w-5 h-5 text-purple-400" />,
-                        title: 'Tracking starten',
-                        action: 'Erstelle deinen ersten Eintrag für maßgeschneiderte Tipps.',
+                        icon: <Plus className="w-5 h-5 text-gold-500" />,
+                        title: 'Willkommen',
+                        action: 'Starte dein erstes Tracking für persönliche Tipps.',
                         priority: 'high'
                     });
                     return suggestions;
                 }
 
-                // 1. SCHMERZ-MANAGEMENT
+                // 1. SCHMERZ
                 if (latestEntry.painLevel >= 8) {
                     suggestions.push({
-                        icon: <Thermometer className="w-5 h-5 text-red-500" />,
-                        title: 'Akuter Schmerz-Modus',
-                        action: 'Sofort hinlegen. Beine hoch (45°). Kühlen (kein Eis direkt auf Haut!). Keine Wärme!',
+                        icon: <Thermometer className="w-5 h-5 text-red-400" />,
+                        title: 'Akut-Maßnahme',
+                        action: 'Sofort hinlegen, Beine hoch (45°). Kühlen! Keine Wärme.',
                         priority: 'high'
                     });
                 } else if (latestEntry.painLevel >= 5) {
-                    const painTips = [
-                        'Sanfte Lymphdrainage oder leichtes Ausstreichen in Richtung Herz.',
-                        'Wechselduschen an den Unterschenkeln können jetzt Entlastung bringen.',
-                        'Hast du deine Kompression heute lang genug getragen?'
-                    ];
-                    suggestions.push({
-                        icon: <Activity className="w-5 h-5 text-orange-400" />,
-                        title: 'Schmerzlinderung',
-                        action: pickOne(painTips),
+                     suggestions.push({
+                        icon: <Activity className="w-5 h-5 text-gold-500" />,
+                        title: 'Entlastung',
+                        action: pickOne(['Sanfte Lymphdrainage Richtung Herz.', 'Wechselduschen an den Waden.', 'Kompression getragen?']),
                         priority: 'medium'
                     });
                 }
 
-                // 2. RLS (Restless Legs)
+                // 2. RLS
                 if (latestEntry.rlsLevel >= 6) {
-                    const rlsTips = [
-                        'Magnesiumöl direkt auf die Waden sprühen & einmassieren.',
-                        'Igelball-Massage der Fußsohlen zur Nervenstimulation.',
-                        'Waden-Dehnung im Stehen (Ausfallschritt an der Wand).'
-                    ];
-                    suggestions.push({
-                        icon: <Moon className="w-5 h-5 text-purple-500" />,
-                        title: 'RLS Intervention',
-                        action: pickOne(rlsTips),
+                     suggestions.push({
+                        icon: <Moon className="w-5 h-5 text-gold-600" />,
+                        title: 'RLS Beruhigung',
+                        action: pickOne(['Magnesiumöl einmassieren.', 'Igelball-Massage Fußsohlen.', 'Waden sanft dehnen.']),
                         priority: 'high'
                     });
-                } else if (latestEntry.rlsLevel >= 3) {
-                     suggestions.push({
-                        icon: <Wind className="w-5 h-5 text-purple-300" />,
-                        title: 'Unruhige Beine',
-                        action: 'Ein kurzer Spaziergang an der frischen Luft kann das Nervensystem beruhigen.',
-                        priority: 'medium'
-                    });
                 }
 
-                // 3. HYDRATION (Falls verfügbar)
-                if (latestEntry.type === 'detailed' && latestEntry.hydration !== undefined) {
-                    if (latestEntry.hydration < 1.5) {
-                         suggestions.push({
-                            icon: <Droplets className="w-5 h-5 text-blue-500" />,
-                            title: 'Lymphfluss anregen',
-                            action: 'Achtung: Zu wenig Wasser staut die Lymphe. Trink jetzt ein großes Glas!',
-                            priority: 'high'
-                        });
-                    } else if (latestEntry.hydration > 2.5) {
-                         suggestions.push({
-                            icon: <Check className="w-5 h-5 text-green-500" />,
-                            title: 'Super hydriert!',
-                            action: 'Perfekt für dein Gewebe. Weiter so!',
-                            priority: 'low'
-                        });
-                    }
-                }
-
-                // 4. ZYKLUS & ALTER (Perimenopause)
+                // 4. ZYKLUS & ALTER
                 if (userProfile && userProfile.age >= 40 && cycleInfo) {
                     if (cycleInfo.day > 20) {
-                        // PMS Phase
                         suggestions.push({
-                            icon: <Brain className="w-5 h-5 text-pink-400" />,
-                            title: 'Zyklus-Endphase',
-                            action: 'Progesteron fällt ab. Wassereinlagerungen normal. Weniger Salz essen, mehr Brennnesseltee.',
-                            priority: 'medium'
-                        });
-                    } else if (cycleInfo.day < 5) {
-                        // Periode
-                        suggestions.push({
-                            icon: <Heart className="w-5 h-5 text-red-300" />,
-                            title: 'Zyklus-Neustart',
-                            action: 'Gönn dir Ruhe. Wärme im Rücken hilft, aber Beine kühl halten.',
+                            icon: <Brain className="w-5 h-5 text-gold-400" />,
+                            title: 'Hormon-Balance',
+                            action: 'Zyklusende: Wassereinlagerungen normal. Wenig Salz, viel Brennnesseltee.',
                             priority: 'medium'
                         });
                     }
                 }
 
-                // 5. TAGESZEIT-ABHÄNGIG
-                if (hour >= 6 && hour < 11) {
-                    suggestions.push({
-                        icon: <Sunrise className="w-5 h-5 text-yellow-500" />,
-                        title: 'Morgen-Routine',
-                        action: 'Trockenbürsten vor dem Duschen regt das Lymphsystem optimal an.',
-                        priority: 'medium'
-                    });
-                } else if (hour >= 18) {
-                    if (latestEntry.rlsLevel > 3) {
-                        suggestions.push({
-                            icon: <Coffee className="w-5 h-5 text-gray-500" />,
-                            title: 'Abend-Check',
-                            action: 'Verzichte jetzt auf Alkohol & Koffein, das triggert RLS massiv.',
-                            priority: 'high'
-                        });
-                    } else {
-                         suggestions.push({
-                            icon: <Sunset className="w-5 h-5 text-indigo-400" />,
-                            title: 'Entspannung',
-                            action: 'Beine hochlegen und 5 Minuten tief in den Bauch atmen (Vagus-Nerv).',
-                            priority: 'low'
-                        });
-                    }
-                }
-
-                // 6. WENN ALLES GUT IST (Maintenance)
-                if (suggestions.length === 0 && latestEntry.painLevel < 3 && latestEntry.rlsLevel < 3) {
+                // 6. MAINTENANCE
+                if (suggestions.length === 0 && latestEntry.painLevel < 4) {
                      suggestions.push({
-                        icon: <Smile className="w-5 h-5 text-green-500" />,
-                        title: 'Alles im Grünen Bereich',
-                        action: 'Toll! Ein guter Moment für Hautpflege oder ein leichtes Workout.',
+                        icon: <Smile className="w-5 h-5 text-gold-500" />,
+                        title: 'Alles im Fluss',
+                        action: 'Ein guter Moment für Hautpflege oder leichte Bewegung.',
                         priority: 'low'
                     });
                 }
 
-                return suggestions.slice(0, 4); // Max 4 Tipps anzeigen
+                return suggestions.slice(0, 3); 
             };
 
             const suggestions = getSmartSuggestions();
 
             // --- HELPER FUNKTIONEN ---
             const addQuickEntry = (pain, rls) => {
-                const newEntry = {
-                    id: Date.now(),
-                    date: new Date().toISOString(),
-                    painLevel: pain,
-                    rlsLevel: rls,
-                    type: 'quick'
-                };
+                const newEntry = { id: Date.now(), date: new Date().toISOString(), painLevel: pain, rlsLevel: rls, type: 'quick' };
                 saveEntries([newEntry, ...entries]);
                 setShowQuickLog(false);
             };
 
              const addDetailedEntry = (data) => {
-                const newEntry = {
-                    id: Date.now(),
-                    date: new Date().toISOString(),
-                    ...data,
-                    type: 'detailed'
-                };
+                const newEntry = { id: Date.now(), date: new Date().toISOString(), ...data, type: 'detailed' };
                 saveEntries([newEntry, ...entries]);
                 setShowDetailedLog(false);
             };
 
-            // --- KOMPONENTEN ---
+            // --- KOMPONENTEN (Gold Theme angepasst) ---
 
             const SetupModal = () => {
                 const [name, setName] = useState('');
                 const [age, setAge] = useState(42);
                 const [lastPeriod, setLastPeriod] = useState('');
 
-                const handleSubmit = () => {
-                    if(name && lastPeriod) {
-                        saveProfile({ name, age, lastPeriod });
-                    }
-                };
+                const handleSubmit = () => { if(name && lastPeriod) saveProfile({ name, age, lastPeriod }); };
 
                 return (
-                    <div className="fixed inset-0 bg-purple-900 bg-opacity-90 z-50 flex items-center justify-center p-4">
-                        <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl fade-in">
-                            <div className="text-center mb-6">
-                                <Heart className="w-12 h-12 text-pink-500 mx-auto mb-2" />
-                                <h2 className="text-2xl font-bold text-gray-800">Willkommen!</h2>
-                                <p className="text-gray-600">Lass uns die App für dich einrichten.</p>
+                    <div className="fixed inset-0 bg-gold-100 bg-opacity-90 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+                        <div className="bg-white rounded-2xl p-8 w-full max-w-sm shadow-xl fade-in border border-gold-200">
+                            <div className="text-center mb-8">
+                                <Feather className="w-12 h-12 text-gold-500 mx-auto mb-4" strokeWidth={1} />
+                                <h2 className="text-3xl font-handwriting text-gold-600 mb-2">Willkommen</h2>
+                                <p className="text-gray-500">Richten wir DaniCare für dich ein.</p>
                             </div>
-                            
-                            <div className="space-y-4">
+                            <div className="space-y-5">
+                                <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full p-3 border-b-2 border-gold-200 focus:border-gold-500 outline-none bg-transparent text-center text-lg placeholder-gold-300" placeholder="Dein Name" />
+                                <input type="number" value={age} onChange={e => setAge(parseInt(e.target.value))} className="w-full p-3 border-b-2 border-gold-200 focus:border-gold-500 outline-none bg-transparent text-center text-lg" placeholder="Alter" />
                                 <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-1">Dein Name</label>
-                                    <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full p-3 border rounded-xl" placeholder="Wie darf ich dich nennen?" />
+                                    <label className="block text-xs text-gold-400 text-center mb-1">Letzte Periode</label>
+                                    <input type="date" value={lastPeriod} onChange={e => setLastPeriod(e.target.value)} className="w-full p-3 border-b-2 border-gold-200 focus:border-gold-500 outline-none bg-transparent text-center text-lg text-gray-600" />
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-1">Dein Alter</label>
-                                    <input type="number" value={age} onChange={e => setAge(parseInt(e.target.value))} className="w-full p-3 border rounded-xl" />
-                                    {age >= 40 && <p className="text-xs text-purple-600 mt-1">✨ Wir passen die Tipps an (Pre-Menopause Support)</p>}
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-1">Erster Tag der letzten Periode</label>
-                                    <input type="date" value={lastPeriod} onChange={e => setLastPeriod(e.target.value)} className="w-full p-3 border rounded-xl" />
-                                </div>
-                                <button onClick={handleSubmit} className="w-full bg-purple-600 text-white p-3 rounded-xl font-bold mt-4 shadow-lg hover:bg-purple-700">Los geht's!</button>
+                                <button onClick={handleSubmit} className="w-full bg-gold-500 text-white p-3 rounded-full font-bold mt-6 shadow-md hover:bg-gold-600 transition uppercase tracking-wider text-sm">Starten</button>
                             </div>
                         </div>
                     </div>
@@ -337,42 +264,26 @@
 
             const ToolboxModal = () => {
                 if (!activeToolboxItem) return null;
-                
                 const content = {
-                    cool: {
-                        title: "🧊 Richtig Kühlen",
-                        steps: ["Niemals Eis direkt auf die Haut!", "Kühlpack in ein dünnes Tuch wickeln.", "Maximal 15-20 Minuten kühlen.", "Danach mindestens 1 Stunde Pause.", "Beine dabei hochlagern (über Herzhöhe)."]
-                    },
-                    rls: {
-                        title: "🦵 RLS Soforthilfe",
-                        steps: ["Waden sanft dehnen (Ausfallschritt).", "Wechselduschen (warm/kalt) an den Unterschenkeln.", "Magnesiumöl einmassieren.", "Ablenkung: Ein paar Schritte gehen.", "Vermeide jetzt Handy/Screens (blaues Licht)."]
-                    },
-                    breath: {
-                        title: "🧘‍♀️ 4-7-8 Atmung",
-                        steps: ["Setz dich bequem hin.", "Atme tief durch die Nase ein (zähle bis 4).", "Halte den Atem an (zähle bis 7).", "Atme kräftig durch den Mund aus (zähle bis 8).", "Wiederhole das 4 mal."]
-                    }
+                    cool: { title: "🧊 Richtig Kühlen", steps: ["Nie Eis direkt auf Haut!", "Kühlpack in Tuch wickeln.", "Max. 15-20 Min.", "Beine hochlagern."] },
+                    rls: { title: "🦵 RLS Soforthilfe", steps: ["Waden sanft dehnen.", "Wechselduschen (warm/kalt).", "Magnesiumöl einmassieren.", "Handy weg (Blaulicht meiden)."] },
+                    breath: { title: "🧘‍♀️ 4-7-8 Atmung", steps: ["Tief durch Nase ein (4s).", "Atem halten (7s).", "Kräftig durch Mund aus (8s).", "4x wiederholen."] }
                 };
-                
                 const info = content[activeToolboxItem];
-
                 return (
-                    <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4" onClick={() => setActiveToolboxItem(null)}>
-                        <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl relative" onClick={e => e.stopPropagation()}>
-                            <button onClick={() => setActiveToolboxItem(null)} className="absolute top-4 right-4 text-gray-400">
-                                <X className="w-6 h-6" />
-                            </button>
-                            <h3 className="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-                                {info.title}
-                            </h3>
-                            <ul className="space-y-3">
+                    <div className="fixed inset-0 bg-white bg-opacity-80 z-50 flex items-center justify-center p-4 backdrop-blur-md" onClick={() => setActiveToolboxItem(null)}>
+                        <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl border border-gold-100 relative fade-in" onClick={e => e.stopPropagation()}>
+                            <button onClick={() => setActiveToolboxItem(null)} className="absolute top-4 right-4 text-gold-400 hover:text-gold-600"><X className="w-6 h-6" /></button>
+                            <h3 className="text-2xl font-handwriting text-gold-600 mb-6 flex items-center gap-2">{info.title}</h3>
+                            <ul className="space-y-4">
                                 {info.steps.map((step, idx) => (
-                                    <li key={idx} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                                        <div className="bg-purple-100 text-purple-600 rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 text-sm font-bold">{idx + 1}</div>
-                                        <span className="text-gray-700">{step}</span>
+                                    <li key={idx} className="flex items-center gap-3 text-gray-700">
+                                        <div className="w-2 h-2 bg-gold-400 rounded-full"></div>
+                                        <span>{step}</span>
                                     </li>
                                 ))}
                             </ul>
-                            <button onClick={() => setActiveToolboxItem(null)} className="w-full mt-6 bg-gray-100 text-gray-700 p-3 rounded-xl font-semibold">Schließen</button>
+                            <button onClick={() => setActiveToolboxItem(null)} className="w-full mt-8 border border-gold-300 text-gold-600 p-3 rounded-full font-semibold hover:bg-gold-50 transition">Schließen</button>
                         </div>
                     </div>
                 );
@@ -382,290 +293,174 @@
                 const [pain, setPain] = useState(5);
                 const [rls, setRls] = useState(5);
                 return (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                        <div className="bg-white rounded-2xl p-6 max-w-md w-full fade-in">
-                            <div className="flex justify-between items-center mb-6">
-                                <h3 className="text-xl font-bold text-gray-800">Schneller Check-in</h3>
-                                <button onClick={() => setShowQuickLog(false)}><X className="w-6 h-6 text-gray-400" /></button>
+                    <div className="fixed inset-0 bg-white bg-opacity-90 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+                        <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-xl border border-gold-100 fade-in">
+                            <div className="flex justify-between items-center mb-8">
+                                <h3 className="text-2xl font-handwriting text-gold-600">Schneller Check-in</h3>
+                                <button onClick={() => setShowQuickLog(false)}><X className="w-6 h-6 text-gold-400" /></button>
                             </div>
                             <div className="space-y-8">
                                 <div>
-                                    <label className="flex justify-between font-semibold mb-3">
-                                        <span>Schmerz</span>
-                                        <span className="text-2xl text-red-500 font-bold">{pain}/10</span>
+                                    <label className="flex justify-between font-semibold mb-3 text-gray-700">
+                                        <span>Schmerz</span><span className="text-xl text-gold-600 font-bold">{pain}</span>
                                     </label>
-                                    <input 
-                                        type="range" min="0" max="10" value={pain} 
-                                        onChange={e => setPain(parseInt(e.target.value))} 
-                                        className="w-full h-3 rounded-lg appearance-none cursor-pointer"
-                                        style={{background: 'linear-gradient(to right, #86efac 0%, #fde047 50%, #ef4444 100%)'}} 
-                                    />
-                                    <div className="flex justify-between text-xs text-gray-400 mt-2"><span>🙂</span><span>😖</span></div>
+                                    <input type="range" min="0" max="10" value={pain} onChange={e => setPain(parseInt(e.target.value))} style={{background: 'linear-gradient(to right, #FCEFC7 0%, #D9A53F 100%)'}} />
                                 </div>
                                 <div>
-                                    <label className="flex justify-between font-semibold mb-3">
-                                        <span>RLS (Unruhe)</span>
-                                        <span className="text-2xl text-purple-500 font-bold">{rls}/10</span>
+                                    <label className="flex justify-between font-semibold mb-3 text-gray-700">
+                                        <span>Unruhe (RLS)</span><span className="text-xl text-gold-600 font-bold">{rls}</span>
                                     </label>
-                                    <input 
-                                        type="range" min="0" max="10" value={rls} 
-                                        onChange={e => setRls(parseInt(e.target.value))} 
-                                        className="w-full h-3 rounded-lg appearance-none cursor-pointer"
-                                        style={{background: 'linear-gradient(to right, #86efac 0%, #fde047 50%, #a855f7 100%)'}} 
-                                    />
-                                    <div className="flex justify-between text-xs text-gray-400 mt-2"><span>Ruhe</span><span>Zappelig</span></div>
+                                    <input type="range" min="0" max="10" value={rls} onChange={e => setRls(parseInt(e.target.value))} style={{background: 'linear-gradient(to right, #FCEFC7 0%, #D9A53F 100%)'}} />
                                 </div>
                             </div>
-                            <button onClick={() => addQuickEntry(pain, rls)} className="w-full mt-8 bg-gradient-to-r from-purple-500 to-pink-500 text-white p-4 rounded-xl font-bold shadow-lg hover:shadow-xl transition transform hover:scale-[1.02]">Speichern</button>
+                            <button onClick={() => addQuickEntry(pain, rls)} className="w-full mt-10 bg-gold-500 text-white p-4 rounded-full font-bold shadow-md hover:bg-gold-600 transition uppercase tracking-wider text-sm">Speichern</button>
                         </div>
                     </div>
                 );
             };
 
             const DetailedLogModal = () => {
-                const [pain, setPain] = useState(5);
-                const [rls, setRls] = useState(5);
-                const [sleep, setSleep] = useState(5);
-                const [hydration, setHydration] = useState(2);
-                const [compression, setCompression] = useState(0);
-                const [notes, setNotes] = useState('');
+                const [pain, setPain] = useState(5); const [rls, setRls] = useState(5); const [sleep, setSleep] = useState(5);
+                const [hydration, setHydration] = useState(2); const [compression, setCompression] = useState(0); const [notes, setNotes] = useState('');
+                const handleSubmit = () => { addDetailedEntry({ painLevel: pain, rlsLevel: rls, sleepQuality: sleep, hydration, compression, notes }); };
 
-                const handleSubmit = () => {
-                    addDetailedEntry({
-                        painLevel: pain,
-                        rlsLevel: rls,
-                        sleepQuality: sleep,
-                        hydration,
-                        compression,
-                        notes
-                    });
-                };
+                const goldGradient = 'linear-gradient(to right, #FCEFC7 0%, #D9A53F 100%)';
 
                 return (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-                        <div className="bg-white rounded-2xl p-6 max-w-md w-full my-8 max-h-[90vh] overflow-y-auto fade-in">
+                    <div className="fixed inset-0 bg-white bg-opacity-95 z-50 flex items-center justify-center p-4 overflow-y-auto backdrop-blur-sm">
+                        <div className="bg-white rounded-2xl p-6 max-w-md w-full my-8 max-h-[90vh] overflow-y-auto shadow-xl border border-gold-100 fade-in">
                             <div className="flex justify-between items-center mb-6">
-                                <h3 className="text-xl font-bold text-gray-800">Detaillierter Eintrag</h3>
-                                <button onClick={() => setShowDetailedLog(false)} className="text-gray-400">
-                                    <X className="w-6 h-6" />
-                                </button>
+                                <h3 className="text-2xl font-handwriting text-gold-600">Details</h3>
+                                <button onClick={() => setShowDetailedLog(false)} className="text-gold-400"><X className="w-6 h-6" /></button>
                             </div>
-                            
-                            <div className="space-y-6">
-                                {/* Schmerz */}
-                                <div>
-                                    <label className="flex justify-between font-semibold mb-2">
-                                        <span>Schmerz</span>
-                                        <span className="text-lg font-bold text-red-500">{pain}/10</span>
-                                    </label>
-                                    <input 
-                                        type="range" min="0" max="10" value={pain} 
-                                        onChange={e => setPain(parseInt(e.target.value))} 
-                                        className="w-full"
-                                        style={{background: 'linear-gradient(to right, #86efac 0%, #fde047 50%, #ef4444 100%)'}} 
-                                    />
-                                </div>
-
-                                {/* RLS */}
-                                <div>
-                                    <label className="flex justify-between font-semibold mb-2">
-                                        <span>RLS</span>
-                                        <span className="text-lg font-bold text-purple-500">{rls}/10</span>
-                                    </label>
-                                    <input 
-                                        type="range" min="0" max="10" value={rls} 
-                                        onChange={e => setRls(parseInt(e.target.value))} 
-                                        className="w-full"
-                                        style={{background: 'linear-gradient(to right, #86efac 0%, #fde047 50%, #a855f7 100%)'}} 
-                                    />
-                                </div>
-
-                                {/* Schlaf */}
-                                <div>
-                                    <label className="flex justify-between font-semibold mb-2">
-                                        <span>Schlafqualität</span>
-                                        <span className="text-lg font-bold text-blue-500">{sleep}/10</span>
-                                    </label>
-                                    <input 
-                                        type="range" min="0" max="10" value={sleep} 
-                                        onChange={e => setSleep(parseInt(e.target.value))} 
-                                        className="w-full"
-                                        style={{background: 'linear-gradient(to right, #ef4444 0%, #fde047 50%, #86efac 100%)'}} 
-                                    />
-                                </div>
-
-                                {/* Wasser */}
-                                <div>
-                                    <label className="flex justify-between font-semibold mb-2">
-                                        <span>Wasser</span>
-                                        <span className="text-lg font-bold text-cyan-500">{hydration} L</span>
-                                    </label>
-                                    <input 
-                                        type="range" min="0" max="5" step="0.5" value={hydration} 
-                                        onChange={e => setHydration(parseFloat(e.target.value))} 
-                                        className="w-full"
-                                        style={{background: 'linear-gradient(to right, #cffafe 0%, #06b6d4 100%)'}} 
-                                    />
-                                </div>
-
-                                {/* Kompression */}
-                                <div>
-                                    <label className="flex justify-between font-semibold mb-2">
-                                        <span>Kompression</span>
-                                        <span className="text-lg font-bold text-orange-500">{compression} Std</span>
-                                    </label>
-                                    <input 
-                                        type="range" min="0" max="24" value={compression} 
-                                        onChange={e => setCompression(parseInt(e.target.value))} 
-                                        className="w-full"
-                                        style={{background: 'linear-gradient(to right, #ffedd5 0%, #f97316 100%)'}} 
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block font-semibold mb-2">Notizen</label>
-                                    <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Besonderheiten heute?" className="w-full p-3 border rounded-xl h-24 focus:ring-2 focus:ring-purple-500 outline-none" />
-                                </div>
+                            <div className="space-y-6 text-gray-700">
+                                <div><label className="flex justify-between font-semibold mb-2"><span>Schmerz</span><span className="text-gold-600">{pain}</span></label><input type="range" min="0" max="10" value={pain} onChange={e => setPain(parseInt(e.target.value))} style={{background: goldGradient}} /></div>
+                                <div><label className="flex justify-between font-semibold mb-2"><span>RLS</span><span className="text-gold-600">{rls}</span></label><input type="range" min="0" max="10" value={rls} onChange={e => setRls(parseInt(e.target.value))} style={{background: goldGradient}} /></div>
+                                <div><label className="flex justify-between font-semibold mb-2"><span>Schlaf</span><span className="text-gold-600">{sleep}</span></label><input type="range" min="0" max="10" value={sleep} onChange={e => setSleep(parseInt(e.target.value))} style={{background: goldGradient}} /></div>
+                                <div><label className="flex justify-between font-semibold mb-2"><span>Wasser (L)</span><span className="text-gold-600">{hydration}</span></label><input type="range" min="0" max="5" step="0.5" value={hydration} onChange={e => setHydration(parseFloat(e.target.value))} style={{background: goldGradient}} /></div>
+                                <div><label className="flex justify-between font-semibold mb-2"><span>Kompression (h)</span><span className="text-gold-600">{compression}</span></label><input type="range" min="0" max="24" value={compression} onChange={e => setCompression(parseInt(e.target.value))} style={{background: goldGradient}} /></div>
+                                <div><label className="block font-semibold mb-2">Notizen</label><textarea value={notes} onChange={e => setNotes(e.target.value)} className="w-full p-3 border border-gold-200 rounded-xl h-24 focus:border-gold-500 outline-none bg-gold-50" /></div>
                             </div>
-                            <button onClick={handleSubmit} className="w-full mt-6 bg-gradient-to-r from-purple-500 to-pink-500 text-white p-4 rounded-xl font-bold shadow-lg">Speichern</button>
+                            <button onClick={handleSubmit} className="w-full mt-8 bg-gold-500 text-white p-4 rounded-full font-bold shadow-md hover:bg-gold-600 transition uppercase tracking-wider text-sm">Speichern</button>
                         </div>
                     </div>
                 );
             };
 
-            // --- VIEWS ---
+            // --- VIEWS (Gold Theme) ---
 
             const DashboardView = () => (
-                <div className="space-y-4 pb-20 fade-in">
-                    <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between">
-                        <div>
-                            <h2 className="text-lg font-bold text-gray-800">Hallo {userProfile?.name || 'Dani'}! 👋</h2>
-                            {cycleInfo && (
-                                <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
-                                    <Activity className="w-4 h-4 text-pink-400" />
-                                    Zyklustag {cycleInfo.day} • {cycleInfo.phase}
-                                </p>
-                            )}
-                        </div>
-                        <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                            <Smile className="w-6 h-6 text-purple-600" />
-                        </div>
+                <div className="space-y-6 fade-in">
+                    {/* Greeting - Weiß/Gold */}
+                    <div className="bg-white p-6 rounded-2xl border border-gold-100 shadow-sm text-center">
+                        <h2 className="text-2xl font-handwriting text-gold-600 mb-1">Hallo {userProfile?.name || 'Dani'}</h2>
+                        {cycleInfo && <p className="text-sm text-gold-400 uppercase tracking-widest flex justify-center items-center gap-2"><Activity size={14}/> Tag {cycleInfo.day} • {cycleInfo.phase}</p>}
                     </div>
 
-                    <div className="bg-gradient-to-br from-purple-600 to-pink-500 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
-                         <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full -mr-10 -mt-10"></div>
-                        <h2 className="text-xl font-bold mb-4 relative z-10">Wie fühlen sich die Beine an?</h2>
-                        <div className="grid grid-cols-2 gap-3 relative z-10">
-                            <button onClick={() => setShowQuickLog(true)} className="bg-white text-purple-600 px-4 py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-gray-50 transition transform hover:scale-105 shadow-md">
+                    {/* Main Actions - Gold Gradient */}
+                    <div className="bg-gradient-to-br from-gold-400 to-gold-600 rounded-2xl p-8 text-white shadow-lg text-center relative overflow-hidden">
+                        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-white to-transparent"></div>
+                        <h2 className="text-xl font-semibold mb-6 relative z-10 text-white">Wie fühlen sich die Beine an?</h2>
+                        <div className="flex gap-4 justify-center relative z-10">
+                            <button onClick={() => setShowQuickLog(true)} className="bg-white text-gold-600 px-6 py-3 rounded-full font-bold flex items-center gap-2 shadow-sm hover:shadow-md transition uppercase text-sm tracking-wider">
                                 <Zap className="w-4 h-4" /> Schnell
                             </button>
-                            <button onClick={() => setShowDetailedLog(true)} className="bg-purple-700 bg-opacity-50 text-white px-4 py-3 rounded-xl font-bold flex items-center justify-center gap-2 border border-purple-400 hover:bg-purple-700 transition transform hover:scale-105 shadow-md">
+                            <button onClick={() => setShowDetailedLog(true)} className="bg-gold-700 bg-opacity-30 text-white px-6 py-3 rounded-full font-bold flex items-center gap-2 border border-gold-300 hover:bg-gold-700 transition uppercase text-sm tracking-wider">
                                 <Plus className="w-4 h-4" /> Details
                             </button>
                         </div>
                     </div>
 
+                    {/* Suggestions - Weiß/Gold */}
                     <div>
-                        <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
-                            <Zap className="w-5 h-5 text-yellow-500" />
-                            Tipps für dich
+                        <h3 className="font-bold text-gray-700 mb-4 flex items-center gap-2 uppercase tracking-wider text-sm">
+                            <Zap className="w-4 h-4 text-gold-500" /> Impulse für dich
                         </h3>
-                        <div className="space-y-2">
+                        <div className="space-y-3">
                             {suggestions.map((suggestion, idx) => (
-                                <div key={idx} className={`p-4 rounded-xl border-l-4 bg-white shadow-sm ${suggestion.priority === 'high' ? 'border-red-400' : suggestion.priority === 'medium' ? 'border-orange-400' : 'border-green-400'}`}>
-                                    <div className="flex items-start gap-3">
-                                        {suggestion.icon}
-                                        <div>
-                                            <h4 className="font-semibold text-gray-800">{suggestion.title}</h4>
-                                            <p className="text-sm text-gray-600">{suggestion.action}</p>
-                                        </div>
+                                <div key={idx} className="p-5 rounded-xl bg-white border border-gold-100 shadow-sm flex items-start gap-4">
+                                    <div className="p-2 bg-gold-50 rounded-full">{suggestion.icon}</div>
+                                    <div>
+                                        <h4 className="font-semibold text-gray-800 mb-1">{suggestion.title}</h4>
+                                        <p className="text-sm text-gray-500 leading-relaxed">{suggestion.action}</p>
                                     </div>
                                 </div>
                             ))}
                         </div>
                     </div>
 
-                    <div className="bg-orange-50 rounded-2xl p-5 border border-orange-100">
-                        <h3 className="font-bold text-orange-800 mb-4 flex items-center gap-2">
-                            <AlertCircle className="w-5 h-5" />
-                            Notfall-Toolbox
+                    {/* Toolbox - Weiß/Gold */}
+                    <div className="bg-gold-50 rounded-2xl p-6 border border-gold-100">
+                        <h3 className="font-bold text-gold-700 mb-4 flex items-center gap-2 uppercase tracking-wider text-sm">
+                            <AlertCircle className="w-4 h-4" /> Notfall-Toolbox
                         </h3>
-                        <div className="grid grid-cols-2 gap-2">
-                            <button onClick={() => setActiveToolboxItem('cool')} className="bg-white p-3 rounded-xl text-sm font-semibold text-gray-700 shadow-sm border border-orange-100 hover:bg-orange-100 transition">
-                                🧊 Kühlprotokoll
-                            </button>
-                            <button onClick={() => setActiveToolboxItem('rls')} className="bg-white p-3 rounded-xl text-sm font-semibold text-gray-700 shadow-sm border border-orange-100 hover:bg-orange-100 transition">
-                                🦵 RLS Hilfe
-                            </button>
-                            <button onClick={() => setShowQuickLog(true)} className="bg-white p-3 rounded-xl text-sm font-semibold text-gray-700 shadow-sm border border-orange-100 hover:bg-orange-100 transition">
-                                💊 Schmerz erfassen
-                            </button>
-                            <button onClick={() => setActiveToolboxItem('breath')} className="bg-white p-3 rounded-xl text-sm font-semibold text-gray-700 shadow-sm border border-orange-100 hover:bg-orange-100 transition">
-                                🧘‍♀️ Atemübung
+                        <div className="grid grid-cols-2 gap-3">
+                            {[['cool', '🧊 Kühlen'], ['rls', '🦵 RLS Hilfe'], ['breath', '🧘‍♀️ Atmen']].map(([key, label]) => (
+                                <button key={key} onClick={() => setActiveToolboxItem(key)} className="bg-white p-4 rounded-xl text-sm font-semibold text-gray-600 shadow-sm border border-gold-100 hover:border-gold-300 transition flex justify-center">
+                                    {label}
+                                </button>
+                            ))}
+                             <button onClick={() => setShowQuickLog(true)} className="bg-white p-4 rounded-xl text-sm font-semibold text-gray-600 shadow-sm border border-gold-100 hover:border-gold-300 transition flex justify-center">
+                                💊 Schmerz-Log
                             </button>
                         </div>
                     </div>
                 </div>
             );
 
-            const StatisticsView = () => (
-                <div className="p-4 bg-white rounded-2xl shadow-sm border border-gray-100 text-center py-10 fade-in">
-                    <BarChart3 className="w-16 h-16 text-purple-200 mx-auto mb-4" />
-                    <h3 className="text-gray-800 font-bold">Statistik</h3>
-                    <p className="text-gray-500">Daten werden gesammelt...</p>
-                     <div className="mt-4 text-left">
-                        {entries.length > 0 && (
-                             <p className="text-sm text-gray-600">Einträge: {entries.length}</p>
-                        )}
-                    </div>
-                </div>
-            );
-
             const TrackingView = () => (
-                 <div className="space-y-3 pb-20 fade-in">
-                    <h2 className="font-bold text-xl text-gray-800 mb-4">Verlauf</h2>
-                    {entries.length === 0 ? <p className="text-gray-500 text-center">Noch leer.</p> : entries.map(e => (
-                        <div key={e.id} className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex justify-between items-center">
+                 <div className="space-y-4 pb-20 fade-in">
+                    <h2 className="font-handwriting text-2xl text-gold-600 mb-6 text-center">Verlauf</h2>
+                    {entries.length === 0 ? <p className="text-gold-300 text-center italic">Noch keine Einträge.</p> : entries.map(e => (
+                        <div key={e.id} className="bg-white p-5 rounded-xl border border-gold-100 shadow-sm flex justify-between items-center relative overflow-hidden">
+                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-gold-300"></div>
                             <div>
-                                <p className="text-sm font-bold text-gray-700">{new Date(e.date).toLocaleDateString('de-DE')}</p>
-                                <p className="text-xs text-gray-500">{new Date(e.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                                <p className="font-bold text-gray-700">{new Date(e.date).toLocaleDateString('de-DE', {day:'2-digit', month:'long'})}</p>
+                                <p className="text-xs text-gold-400 uppercase tracking-wider mt-1">{new Date(e.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} Uhr</p>
                             </div>
-                            <div className="text-right">
-                                <span className="block text-xs font-bold text-red-500">Schmerz: {e.painLevel}</span>
-                                <span className="block text-xs font-bold text-purple-500">RLS: {e.rlsLevel}</span>
+                            <div className="text-right space-y-1">
+                                <span className="flex items-center justify-end gap-1 text-sm font-medium text-gray-600"><Thermometer size={14} className="text-gold-500"/> Schmerz: {e.painLevel}</span>
+                                <span className="flex items-center justify-end gap-1 text-sm font-medium text-gray-600"><Moon size={14} className="text-gold-500"/> RLS: {e.rlsLevel}</span>
                             </div>
                         </div>
                     ))}
                 </div>
             );
 
+            // --- MAIN RENDER ---
             return (
-                <div className="min-h-screen bg-gray-50 font-sans text-gray-900 pb-24">
-                    <div className="bg-white p-4 sticky top-0 z-30 shadow-sm flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                             <div className="bg-purple-600 p-2 rounded-lg text-white"><Heart size={20} /></div>
-                             <span className="font-bold text-lg text-gray-800">LipoRelief</span>
+                <div className="min-h-screen bg-white font-sans text-gray-900 safe-area-pb-large relative">
+                    {/* HEADER - Weiß/Gold + Feder Logo */}
+                    <div className="bg-white p-6 sticky top-0 z-30 border-b border-gold-100 shadow-[0_2px_10px_-5px_rgba(217,165,63,0.2)] text-center">
+                        <div className="flex flex-col items-center justify-center">
+                             <Feather className="w-8 h-8 text-gold-500 mb-1 opacity-80" strokeWidth={1.5} />
+                             <h1 className="font-handwriting text-4xl text-gold-600 leading-tight">DaniCare</h1>
                         </div>
                     </div>
 
-                    <div className="p-4 max-w-lg mx-auto">
+                    <div className="p-6 max-w-lg mx-auto">
                         {activeTab === 'dashboard' && <DashboardView />}
-                        {activeTab === 'stats' && <StatisticsView />}
                         {activeTab === 'history' && <TrackingView />}
+                        {/* Statistik Platzhalter der Einfachheit halber entfernt für finalen Look */}
                     </div>
 
-                    <div className="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 p-2 flex justify-around items-center z-40 safe-area-pb">
-                        <button onClick={() => setActiveTab('dashboard')} className={`p-2 rounded-xl flex flex-col items-center gap-1 ${activeTab === 'dashboard' ? 'text-purple-600 bg-purple-50' : 'text-gray-400'}`}>
-                            <Activity size={24} />
-                            <span className="text-[10px] font-bold">Start</span>
+                    {/* WIDMUNG - Sticky Bottom über Navi */}
+                    <div className="fixed bottom-[70px] left-0 w-full bg-white/90 backdrop-blur-md border-t border-gold-100 p-3 text-center z-40 shadow-[0_-2px_10px_-5px_rgba(217,165,63,0.1)]">
+                        <p className="text-sm text-gold-600 italic font-medium leading-tight font-handwriting">
+                            Für Dani – Damit deine Beine endlich so leicht werden, wie du meine Welt machst. ❤️ <br/>
+                            <span className="text-xs opacity-70 font-sans normal-case">- von deinem Kai</span>
+                        </p>
+                    </div>
+
+                    {/* NAVIGATION - Weiß/Gold */}
+                    <div className="fixed bottom-0 left-0 w-full bg-white border-t border-gold-100 p-2 flex justify-around items-center z-40 pb-5 pt-3">
+                        <button onClick={() => setActiveTab('dashboard')} className={`p-2 rounded-xl flex flex-col items-center gap-1 transition ${activeTab === 'dashboard' ? 'text-gold-600' : 'text-gold-300 hover:text-gold-400'}`}>
+                            <Activity size={22} strokeWidth={activeTab === 'dashboard' ? 2.5 : 2} />
+                            <span className="text-[10px] font-bold uppercase tracking-widest">Home</span>
                         </button>
-                        <button onClick={() => setActiveTab('stats')} className={`p-2 rounded-xl flex flex-col items-center gap-1 ${activeTab === 'stats' ? 'text-purple-600 bg-purple-50' : 'text-gray-400'}`}>
-                            <BarChart3 size={24} />
-                            <span className="text-[10px] font-bold">Statistik</span>
-                        </button>
-                        <button onClick={() => setActiveTab('history')} className={`p-2 rounded-xl flex flex-col items-center gap-1 ${activeTab === 'history' ? 'text-purple-600 bg-purple-50' : 'text-gray-400'}`}>
-                            <Calendar size={24} />
-                            <span className="text-[10px] font-bold">Verlauf</span>
+                        <button onClick={() => setActiveTab('history')} className={`p-2 rounded-xl flex flex-col items-center gap-1 transition ${activeTab === 'history' ? 'text-gold-600' : 'text-gold-300 hover:text-gold-400'}`}>
+                            <Calendar size={22} strokeWidth={activeTab === 'history' ? 2.5 : 2} />
+                            <span className="text-[10px] font-bold uppercase tracking-widest">Verlauf</span>
                         </button>
                     </div>
 
